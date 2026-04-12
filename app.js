@@ -4,8 +4,6 @@ const FPS = 30;
 
 let layers = [
   { shape: null, animation: null },
-  { shape: null, animation: null },
-  { shape: null, animation: null },
 ];
 let activeLayer = 0;
 let currentTool = 'rect';
@@ -178,29 +176,40 @@ function updateCursor() {
 }
 
 // ─── MODE SWITCHING ───────────────────────────────────────────────────────────
-const modeToggle = document.getElementById('mode-toggle');
-const modeToggleLabel = document.getElementById('mode-toggle-label');
+const btnDraw   = document.getElementById('btn-draw');
+const btnRecord = document.getElementById('btn-record');
 
-modeToggle.addEventListener('click', () => {
+btnDraw.addEventListener('click', () => {
   if (isRecording || isDrawing || isPlaying) return;
-  setAppMode(appMode === 'draw' ? 'record' : 'draw');
+  setAppMode('draw');
+});
+
+btnRecord.addEventListener('click', () => {
+  if (isRecording || isDrawing || isPlaying) return;
+  setAppMode('record');
 });
 
 function setAppMode(mode) {
   appMode = mode;
+  // Active / inactive states
+  btnDraw.classList.toggle('active', mode === 'draw');
+  btnRecord.classList.toggle('active', mode === 'record');
   if (mode === 'draw') {
-    modeToggle.classList.remove('record-mode');
-    modeToggleLabel.textContent = 'DRAW';
     setStatus('Draw mode — drag on the canvas to place a shape, or click an existing shape to edit it');
   } else {
-    modeToggle.classList.add('record-mode');
-    modeToggleLabel.textContent = 'RECORD';
     setStatus('Record mode — click a shape to edit it, or press REC to record motion');
   }
   updateCursor();
 }
 
 // ─── LAYER TABS ───────────────────────────────────────────────────────────────
+// Returns a short display label for a layer, e.g. "CIRCLE 1", "RECT 2", "LINE 3"
+function layerLabel(idx) {
+  const shape = layers[idx] && layers[idx].shape;
+  const typeName = shape ? shape.type.toUpperCase() : 'EMPTY';
+  return `${typeName} ${idx + 1}`;
+}
+
 function updateLayerTabs() {
   document.querySelectorAll('.layer-tab').forEach((tab, i) => {
     const layer = layers[i];
@@ -208,6 +217,8 @@ function updateLayerTabs() {
     if (i === activeLayer) tab.classList.add('active');
     if (layer && layer.animation) tab.classList.add('has-animation');
     else if (layer && layer.shape) tab.classList.add('has-shape');
+    // Update label to reflect current shape type
+    tab.textContent = layerLabel(i);
   });
 }
 
@@ -216,7 +227,7 @@ document.querySelectorAll('.layer-tab').forEach(tab => {
     if (isRecording || isDrawing) return;
     activeLayer = parseInt(tab.dataset.layer);
     updateLayerTabs();
-    setStatus(`Layer ${activeLayer+1} selected.`);
+    setStatus(`${layerLabel(activeLayer)} selected.`);
   });
 });
 
@@ -229,11 +240,12 @@ document.getElementById('add-layer-btn').addEventListener('click', () => {
   const tab = document.createElement('button');
   tab.className = 'layer-tab';
   tab.dataset.layer = idx;
-  tab.textContent = `LAYER ${idx+1}`;
+  tab.textContent = layerLabel(idx);
   tab.addEventListener('click', () => {
     if (isRecording || isDrawing) return;
     activeLayer = idx;
     updateLayerTabs();
+    setStatus(`${layerLabel(idx)} selected.`);
   });
   row.insertBefore(tab, addBtn);
   activeLayer = idx;
@@ -485,7 +497,7 @@ canvas.addEventListener('mouseup', e => {
   checkExportReady();
 
   setAppMode('record');
-  setStatus(`Shape drawn on Layer ${activeLayer+1}. Click the shape to change its color or size, or press REC to record motion.`);
+  setStatus(`${layerLabel(activeLayer)} drawn. Click it to change colour or size, or press REC to record motion.`);
 });
 
 canvas.addEventListener('mouseleave', e => {
@@ -813,6 +825,7 @@ const helpTitle   = document.getElementById('help-title');
 const helpBody    = document.getElementById('help-body');
 const helpDots    = document.getElementById('help-dots');
 const helpNext    = document.getElementById('help-next');
+const helpBack    = document.getElementById('help-back');
 let helpStep = 0;
 
 // Build dot indicators
@@ -835,12 +848,11 @@ function showHelpStep(idx) {
     d.classList.toggle('active', i === idx);
   });
 
+  // Back disabled on first step
+  helpBack.disabled = idx === 0;
+
   // Last step: change NEXT to DONE
-  if (idx === HELP_STEPS.length - 1) {
-    helpNext.textContent = 'DONE ✓';
-  } else {
-    helpNext.textContent = 'NEXT →';
-  }
+  helpNext.textContent = idx === HELP_STEPS.length - 1 ? 'DONE ✓' : 'NEXT →';
 }
 
 function openHelp() {
@@ -854,6 +866,10 @@ function closeHelp() {
 
 document.getElementById('info-btn').addEventListener('click', openHelp);
 document.getElementById('help-close').addEventListener('click', closeHelp);
+
+helpBack.addEventListener('click', () => {
+  if (helpStep > 0) showHelpStep(helpStep - 1);
+});
 
 helpNext.addEventListener('click', () => {
   if (helpStep < HELP_STEPS.length - 1) {

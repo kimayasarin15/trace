@@ -36,9 +36,10 @@
 
   <div class="toolbar-sep"></div>
 
-  <button id="mode-toggle">
-    <span id="mode-toggle-label">DRAW</span>
-  </button>
+  <div id="mode-btns">
+    <button id="btn-draw" class="mode-btn active">DRAW</button>
+    <button id="btn-record" class="mode-btn">RECORD</button>
+  </div>
 
   <!-- Info + Export (right-aligned group) -->
   <div id="toolbar-right">
@@ -87,9 +88,7 @@
   <div id="bottom-top-row">
     <div id="layer-row">
       <span class="row-label">LAYERS</span>
-      <button class="layer-tab active" data-layer="0">LAYER 1</button>
-      <button class="layer-tab" data-layer="1">LAYER 2</button>
-      <button class="layer-tab" data-layer="2">LAYER 3</button>
+      <button class="layer-tab active" data-layer="0">EMPTY 1</button>
       <button id="add-layer-btn">+ ADD</button>
     </div>
 
@@ -144,13 +143,16 @@
 <!-- Help Modal -->
 <div id="help-modal">
   <div id="help-box">
-    <div id="help-step-label">STEP <span id="help-step-num">1</span> OF 7</div>
+    <div id="help-header">
+      <div id="help-step-label">STEP <span id="help-step-num">1</span> OF 7</div>
+      <button id="help-close" title="Close">✕</button>
+    </div>
     <div id="help-title"></div>
     <div id="help-body"></div>
     <div id="help-footer">
       <div id="help-dots"></div>
       <div id="help-actions">
-        <button id="help-close">CLOSE</button>
+        <button id="help-back">← BACK</button>
         <button id="help-next">NEXT →</button>
       </div>
     </div>
