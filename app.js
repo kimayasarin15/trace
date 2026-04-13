@@ -538,6 +538,109 @@ canvas.addEventListener('mouseleave', e => {
   updateCursor();
 });
 
+// ─── TOUCH SUPPORT ────────────────────────────────────────────────────────────
+// Extract a {clientX, clientY} pair from a touch or mouse event
+function touchPt(e) {
+  const t = e.touches && e.touches.length ? e.touches[0] : e.changedTouches[0];
+  return { clientX: t.clientX, clientY: t.clientY };
+}
+
+canvas.addEventListener('touchstart', e => {
+  e.preventDefault();
+  if (isRecording || isPlaying) return;
+  const pt  = touchPt(e);
+  const pos = canvasPos(pt);
+
+  // Tap on existing shape → open inspector
+  const layer = layers[activeLayer];
+  if (!isDrawing && layer.shape && hitTestShape(layer.shape, pos.x, pos.y)) {
+    const areaR = canvasArea.getBoundingClientRect();
+    openInspector(layer.shape, pt.clientX - areaR.left, pt.clientY - areaR.top);
+    return;
+  }
+
+  if (appMode !== 'draw') return;
+  if (inspecting) { closeInspector(); return; }
+  isDrawing = true;
+  drawStart = pos;
+}, { passive: false });
+
+canvas.addEventListener('touchmove', e => {
+  e.preventDefault();
+  const pt = touchPt(e);
+
+  if (appMode === 'draw' && isDrawing && drawStart) {
+    const cur   = canvasPos(pt);
+    const ghost = buildShapeFromDrag(drawStart, cur);
+    drawFrame(playheadPct);
+    if (ghost) drawGhost(ghost);
+    return;
+  }
+
+  if (appMode === 'record' && isRecording) {
+    const r = canvas.getBoundingClientRect();
+    const x = (pt.clientX - r.left) / canvas.width;
+    const y = (pt.clientY - r.top)  / canvas.height;
+    const t = performance.now();
+    if (!recordStartTime) recordStartTime = t;
+    const elapsed = (t - recordStartTime) / 1000;
+    recordedPath.push({ t: elapsed, x, y });
+
+    drawFrame(0);
+    const layer = layers[activeLayer];
+    if (layer.shape) {
+      const centre = shapeCentre(layer.shape);
+      drawShape(layer.shape,
+        (x - centre.x) * canvas.width,
+        (y - centre.y) * canvas.height);
+    }
+    // Draw trail
+    if (recordedPath.length > 1) {
+      ctx.save();
+      ctx.strokeStyle = 'rgba(74,108,247,0.25)';
+      ctx.lineWidth   = 1.5;
+      ctx.beginPath();
+      recordedPath.forEach((p, i) => {
+        const px = p.x * canvas.width, py = p.y * canvas.height;
+        if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+      });
+      ctx.stroke();
+      ctx.restore();
+    }
+    if (elapsed >= recordDuration) stopRecording();
+  }
+}, { passive: false });
+
+canvas.addEventListener('touchend', e => {
+  e.preventDefault();
+  if (appMode !== 'draw' || !isDrawing || !drawStart) return;
+  isDrawing = false;
+  const pt    = touchPt(e);
+  const end   = canvasPos(pt);
+  const shape = buildShapeFromDrag(drawStart, end);
+  drawStart   = null;
+  if (!shape) return;
+
+  const tooSmall =
+    (shape.type === 'circle' && shape.r * Math.min(canvas.width, canvas.height) < 4) ||
+    (shape.type !== 'circle' && Math.abs(shape.x2 - shape.x1) * canvas.width  < 4 &&
+                                Math.abs(shape.y2 - shape.y1) * canvas.height < 4);
+  if (tooSmall) { drawFrame(playheadPct); return; }
+
+  layers[activeLayer].shape     = shape;
+  layers[activeLayer].animation = null;
+  updateLayerTabs();
+  drawFrame(playheadPct);
+  checkExportReady();
+  setAppMode('record');
+  setStatus(`${layerLabel(activeLayer)} drawn. Tap it to edit, or press REC to record motion.`);
+}, { passive: false });
+
+canvas.addEventListener('touchcancel', () => {
+  if (isDrawing) { isDrawing = false; drawStart = null; drawFrame(playheadPct); }
+  if (appMode === 'record' && isRecording && recordedPath.length > 5) stopRecording();
+});
+
 // ─── RECORDING ────────────────────────────────────────────────────────────────
 const recBtn = document.getElementById('rec-btn');
 const recOverlay = document.getElementById('rec-overlay');
@@ -686,6 +789,20 @@ document.addEventListener('mousemove', e => {
   doScrub(e);
 });
 document.addEventListener('mouseup', () => { scrubbing = false; });
+
+// Touch scrubbing
+timelineTrack.addEventListener('touchstart', e => {
+  e.preventDefault();
+  if (isRecording) return;
+  scrubbing = true;
+  pausePlayback();
+  doScrub({ clientX: e.touches[0].clientX });
+}, { passive: false });
+document.addEventListener('touchmove', e => {
+  if (!scrubbing) return;
+  doScrub({ clientX: e.touches[0].clientX });
+}, { passive: false });
+document.addEventListener('touchend', () => { scrubbing = false; });
 
 function doScrub(e) {
   const r = timelineTrack.getBoundingClientRect();

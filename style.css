@@ -132,6 +132,7 @@
     transform: translate(-50%, -50%);
     box-shadow: 0 4px 32px rgba(0,0,0,0.5);
     cursor: crosshair;
+    touch-action: none; /* prevent browser scroll/zoom on touch */
   }
 
   /* Recording overlay */
@@ -825,3 +826,64 @@
     transition: all 0.15s;
   }
   #canvas-modal-save:hover { background: rgba(74,108,247,0.25); border-color: rgba(74,108,247,0.8); color: #a0b8ff; }
+
+  /* ─── MOBILE RESPONSIVE ──────────────────────────────────────────────────── */
+  @media (max-width: 640px) {
+    /* Toolbar scrolls horizontally rather than wrapping */
+    #toolbar {
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      gap: 4px;
+      padding: 0 8px;
+      scrollbar-width: none;
+    }
+    #toolbar::-webkit-scrollbar { display: none; }
+
+    /* Slightly larger touch targets */
+    .tool-btn,
+    #color-btn,
+    #canvas-settings-btn,
+    #info-btn {
+      width: 42px;
+      height: 42px;
+      flex-shrink: 0;
+    }
+
+    .mode-btn {
+      height: 42px;
+      padding: 0 12px;
+      font-size: 10px;
+    }
+
+    #export-btn {
+      height: 42px;
+      padding: 0 12px;
+      font-size: 10px;
+      white-space: nowrap;
+    }
+
+    #toolbar { height: 58px; }
+
+    /* Bottom panel: stack timeline below the controls row */
+    #bottom-panel { padding: 10px 12px; gap: 8px; }
+
+    .layer-tab,
+    #add-layer-btn { height: 42px; }
+
+    .ctrl-btn { width: 42px; height: 42px; }
+
+    #duration-select { height: 42px; }
+
+    /* Modals full-width on mobile */
+    #canvas-modal-box,
+    #help-box {
+      width: calc(100vw - 24px);
+      padding: 18px 18px 20px;
+    }
+
+    /* Inspector full-width */
+    #inspector { width: calc(100vw - 32px); }
+
+    /* Status text readable */
+    #status { font-size: 10px; }
+  }
