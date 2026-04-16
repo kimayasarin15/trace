@@ -387,24 +387,55 @@ function canvasPos(e) {
   };
 }
 
-function buildShapeFromDrag(start, end) {
+function buildShapeFromDrag(start, end, shiftKey) {
   const minW = 8 / canvas.width, minH = 8 / canvas.height;
+
   if (currentTool === 'rect') {
+    let x1 = start.x, y1 = start.y, x2 = end.x, y2 = end.y;
+    if (shiftKey) {
+      // Constrain to a square in pixel space
+      const dxPx = (x2 - x1) * canvas.width;
+      const dyPx = (y2 - y1) * canvas.height;
+      const size = Math.min(Math.abs(dxPx), Math.abs(dyPx));
+      x2 = x1 + Math.sign(dxPx || 1) * size / canvas.width;
+      y2 = y1 + Math.sign(dyPx || 1) * size / canvas.height;
+    }
     return { type: 'rect', color: currentColor,
-      x1: Math.min(start.x, end.x), y1: Math.min(start.y, end.y),
-      x2: Math.max(start.x, end.x) || start.x + minW,
-      y2: Math.max(start.y, end.y) || start.y + minH,
+      x1: Math.min(x1, x2), y1: Math.min(y1, y2),
+      x2: Math.max(x1, x2) || x1 + minW,
+      y2: Math.max(y1, y2) || y1 + minH,
     };
   } else if (currentTool === 'circle') {
     const cx = (start.x + end.x) / 2, cy = (start.y + end.y) / 2;
-    const r = Math.max(
-      Math.hypot(end.x - start.x, end.y - start.y) / 2,
-      4 / Math.min(canvas.width, canvas.height)
-    );
+    let r;
+    if (shiftKey) {
+      // Use the smaller axis so the circle fits neatly in a square drag
+      const dxPx = Math.abs(end.x - start.x) * canvas.width;
+      const dyPx = Math.abs(end.y - start.y) * canvas.height;
+      const sizePx = Math.min(dxPx, dyPx);
+      r = Math.max(sizePx / 2 / Math.min(canvas.width, canvas.height),
+                   4 / Math.min(canvas.width, canvas.height));
+    } else {
+      r = Math.max(
+        Math.hypot(end.x - start.x, end.y - start.y) / 2,
+        4 / Math.min(canvas.width, canvas.height)
+      );
+    }
     return { type: 'circle', color: currentColor, cx, cy, r };
   } else if (currentTool === 'line') {
+    let x2 = end.x, y2 = end.y;
+    if (shiftKey) {
+      // Snap to nearest 45° increment in pixel space
+      const dxPx = (end.x - start.x) * canvas.width;
+      const dyPx = (end.y - start.y) * canvas.height;
+      const angle   = Math.atan2(dyPx, dxPx);
+      const snapped = Math.round(angle / (Math.PI / 4)) * (Math.PI / 4);
+      const mag = Math.hypot(dxPx, dyPx);
+      x2 = start.x + Math.cos(snapped) * mag / canvas.width;
+      y2 = start.y + Math.sin(snapped) * mag / canvas.height;
+    }
     return { type: 'line', color: currentColor,
-      x1: start.x, y1: start.y, x2: end.x, y2: end.y,
+      x1: start.x, y1: start.y, x2, y2,
     };
   }
 }
@@ -447,7 +478,7 @@ canvas.addEventListener('mousemove', e => {
 
   if (appMode === 'draw' && isDrawing && drawStart) {
     const cur = canvasPos(e);
-    const ghost = buildShapeFromDrag(drawStart, cur);
+    const ghost = buildShapeFromDrag(drawStart, cur, e.shiftKey);
     drawFrame(playheadPct);
     if (ghost) drawGhost(ghost);
     return;
@@ -500,7 +531,7 @@ canvas.addEventListener('mouseup', e => {
   if (appMode !== 'draw' || !isDrawing || !drawStart) return;
   isDrawing = false;
   const end = canvasPos(e);
-  const shape = buildShapeFromDrag(drawStart, end);
+  const shape = buildShapeFromDrag(drawStart, end, e.shiftKey);
   drawStart = null;
   if (!shape) return;
 
@@ -811,8 +842,23 @@ function doScrub(e) {
   drawFrame(pct);
 }
 
+// ─── LIVE GHOST UPDATE ON SHIFT PRESS/RELEASE ────────────────────────────────
+// Track the last mouse position so we can re-draw the ghost when Shift changes
+let lastMouseEvent = null;
+canvas.addEventListener('mousemove', e => { lastMouseEvent = e; }, { passive: true });
+
+function redrawGhostIfDrawing(shiftKey) {
+  if (appMode === 'draw' && isDrawing && drawStart && lastMouseEvent) {
+    const cur   = canvasPos(lastMouseEvent);
+    const ghost = buildShapeFromDrag(drawStart, cur, shiftKey);
+    drawFrame(playheadPct);
+    if (ghost) drawGhost(ghost);
+  }
+}
+
 // ─── KEYBOARD SHORTCUTS ───────────────────────────────────────────────────────
 document.addEventListener('keydown', e => {
+  if (e.key === 'Shift') { redrawGhostIfDrawing(true); return; }
   if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
 
   if (e.key === 'r' || e.key === 'R') recBtn.click();
@@ -1013,6 +1059,11 @@ helpNext.addEventListener('click', () => {
   } else {
     closeHelp();
   }
+});
+
+// Release Shift mid-draw → revert ghost to unconstrained
+document.addEventListener('keyup', e => {
+  if (e.key === 'Shift') redrawGhostIfDrawing(false);
 });
 
 // Close on backdrop click
