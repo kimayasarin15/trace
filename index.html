@@ -23,27 +23,65 @@
 
   <div class="toolbar-sep"></div>
 
-  <button class="tool-btn active" id="tool-rect" title="Rectangle">
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-      <rect x="2" y="3" width="12" height="10" rx="1" stroke="#ccc" stroke-width="1.5"/>
-    </svg>
-  </button>
-  <button class="tool-btn" id="tool-circle" title="Circle">
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-      <circle cx="8" cy="8" r="5.5" stroke="#ccc" stroke-width="1.5"/>
-    </svg>
-  </button>
-  <button class="tool-btn" id="tool-line" title="Line">
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-      <line x1="2" y1="13" x2="14" y2="3" stroke="#ccc" stroke-width="1.5" stroke-linecap="round"/>
-    </svg>
-  </button>
+  <!-- Draw tools (visible in draw mode only) -->
+  <div id="draw-tools">
+    <button class="tool-btn" id="tool-image" title="Upload image">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+        <rect x="1.5" y="3" width="13" height="10" rx="1.5" stroke="#ccc" stroke-width="1.4"/>
+        <circle cx="5.5" cy="6.5" r="1.2" fill="#ccc"/>
+        <path d="M1.5 10.5l3.5-3 2.5 2.5 2-2 4 4" stroke="#ccc" stroke-width="1.3" stroke-linejoin="round" stroke-linecap="round"/>
+      </svg>
+    </button>
+    <input type="file" id="image-input" accept="image/*" style="display:none">
+    <div class="toolbar-sep"></div>
+    <button class="tool-btn active" id="tool-rect" title="Rectangle">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+        <rect x="2" y="3" width="12" height="10" rx="1" stroke="#ccc" stroke-width="1.5"/>
+      </svg>
+    </button>
+    <button class="tool-btn" id="tool-circle" title="Circle">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+        <circle cx="8" cy="8" r="5.5" stroke="#ccc" stroke-width="1.5"/>
+      </svg>
+    </button>
+    <button class="tool-btn" id="tool-line" title="Line">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+        <line x1="2" y1="13" x2="14" y2="3" stroke="#ccc" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>
+    </button>
+    <!-- Color -->
+    <button id="color-btn" title="Color">
+      <input type="color" id="color-input" value="#ff4136">
+      <div id="color-preview"></div>
+    </button>
+  </div>
 
-  <!-- Color -->
-  <button id="color-btn" title="Color">
-    <input type="color" id="color-input" value="#ff4136">
-    <div id="color-preview"></div>
-  </button>
+  <!-- Record tools (visible in record mode only) -->
+  <div id="record-tools" class="hidden">
+    <select id="duration-select">
+      <option value="3">3s</option>
+      <option value="5" selected>5s</option>
+      <option value="10">10s</option>
+      <option value="15">15s</option>
+      <option value="30">30s</option>
+    </select>
+    <button class="ctrl-btn" id="play-btn" title="Play">
+      <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+        <polygon points="3,1 13,7 3,13" fill="#ccc"/>
+      </svg>
+    </button>
+    <button class="ctrl-btn" id="stop-btn" title="Stop">
+      <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+        <rect x="2" y="2" width="10" height="10" rx="1" fill="#ccc"/>
+      </svg>
+    </button>
+    <button class="ctrl-btn rec-btn" id="rec-btn" title="Record">
+      <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+        <circle cx="5" cy="5" r="4" fill="var(--accent)"/>
+      </svg>
+      <span class="rec-btn-label">PRESS R</span>
+    </button>
+  </div>
 
   <div class="toolbar-sep"></div>
 
@@ -78,7 +116,7 @@
   <!-- SHAPE INSPECTOR — lives inside canvas-area so position:absolute is relative to the canvas -->
   <div id="inspector">
     <div id="inspector-title">SHAPE</div>
-    <div class="inspector-row">
+    <div class="inspector-row" id="insp-color-row">
       <label>COLOR</label>
       <div id="insp-color-wrap">
         <input type="color" id="insp-color" />
@@ -96,38 +134,10 @@
 
 <!-- BOTTOM PANEL -->
 <div id="bottom-panel">
-  <div id="bottom-top-row">
-    <div id="playback-row">
-      <select id="duration-select">
-        <option value="3">3s</option>
-        <option value="5" selected>5s</option>
-        <option value="10">10s</option>
-        <option value="15">15s</option>
-        <option value="30">30s</option>
-      </select>
-      <button class="ctrl-btn" id="play-btn" title="Play">
-        <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-          <polygon points="3,1 13,7 3,13" fill="#ccc"/>
-        </svg>
-      </button>
-      <button class="ctrl-btn" id="stop-btn" title="Stop">
-        <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-          <rect x="2" y="2" width="10" height="10" rx="1" fill="#ccc"/>
-        </svg>
-      </button>
-      <button class="ctrl-btn rec-btn" id="rec-btn" title="Record">
-        <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
-          <circle cx="5" cy="5" r="4" fill="var(--accent)"/>
-        </svg>
-        <span class="rec-btn-label">PRESS R</span>
-      </button>
-    </div>
-
-    <div id="layer-row">
-      <span class="row-label">LAYERS</span>
-      <button class="layer-tab active" data-layer="0">EMPTY 1</button>
-      <button id="add-layer-btn">+ ADD</button>
-    </div>
+  <div id="layer-row">
+    <span class="row-label">LAYERS</span>
+    <button class="layer-tab active" data-layer="0">EMPTY 1</button>
+    <button id="add-layer-btn">+ ADD</button>
   </div>
 
   <div id="timeline-row">

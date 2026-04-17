@@ -65,6 +65,13 @@
 
   .toolbar-sep { width: 1px; height: 28px; background: var(--border); margin: 0 4px; }
 
+  #draw-tools, #record-tools {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .hidden { display: none !important; }
+
   /* Color picker */
   #color-btn {
     width: 36px; height: 36px;
@@ -188,14 +195,6 @@
     gap: 10px;
   }
 
-  /* Top row: layers left, playback controls right — both on the same line */
-  #bottom-top-row {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-  }
-
   /* Layer tabs row */
   #layer-row {
     display: flex;
@@ -248,14 +247,6 @@
     flex-shrink: 0;
   }
   #add-layer-btn:hover { border-color: #666; color: var(--text); }
-
-  /* Playback controls row — no longer absolutely positioned */
-  #playback-row {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    flex-shrink: 0;
-  }
 
   .ctrl-btn {
     width: 36px; height: 36px;

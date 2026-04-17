@@ -63,9 +63,10 @@ resizeCanvas();
 // rect:   { type, color, x1, y1, x2, y2 }   (normalised 0-1 coords)
 // circle: { type, color, cx, cy, r }         (normalised)
 // line:   { type, color, x1, y1, x2, y2 }   (normalised)
+// image:  { type, img, cx, cy, w, h, scale } (normalised centre + half-dimensions)
 
 function shapeCentre(shape) {
-  if (shape.type === 'circle') return { x: shape.cx, y: shape.cy };
+  if (shape.type === 'circle' || shape.type === 'image') return { x: shape.cx, y: shape.cy };
   return { x: (shape.x1 + shape.x2) / 2, y: (shape.y1 + shape.y2) / 2 };
 }
 
@@ -97,6 +98,10 @@ function drawShapeCtx(offCtx, shape, W, H, dx, dy) {
     offCtx.moveTo(px1, py1);
     offCtx.lineTo(px2, py2);
     offCtx.stroke();
+  } else if (shape.type === 'image') {
+    const px = shape.cx * W + dx, py = shape.cy * H + dy;
+    const pw = shape.w * W, ph = shape.h * H;
+    offCtx.drawImage(shape.img, px - pw / 2, py - ph / 2, pw, ph);
   }
   offCtx.restore();
 }
@@ -173,7 +178,7 @@ function drawFrame(pct) {
 }
 
 // ─── TOOL SELECTION ───────────────────────────────────────────────────────────
-document.querySelectorAll('.tool-btn[id^="tool-"]').forEach(btn => {
+document.querySelectorAll('.tool-btn[id^="tool-"]:not(#tool-image)').forEach(btn => {
   btn.addEventListener('click', () => {
     if (isRecording || isDrawing) return;
     document.querySelectorAll('.tool-btn[id^="tool-"]').forEach(b => b.classList.remove('active'));
@@ -181,6 +186,42 @@ document.querySelectorAll('.tool-btn[id^="tool-"]').forEach(btn => {
     currentTool = btn.id.replace('tool-', '');
     updateCursor();
   });
+});
+
+// ─── IMAGE UPLOAD ─────────────────────────────────────────────────────────────
+document.getElementById('tool-image').addEventListener('click', () => {
+  if (isRecording || isDrawing) return;
+  document.getElementById('image-input').click();
+});
+
+document.getElementById('image-input').addEventListener('change', e => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const url = URL.createObjectURL(file);
+  const img = new Image();
+  img.onload = () => {
+    URL.revokeObjectURL(url);
+    // Fit image so its longest dimension is 40% of the canvas
+    const aspect = img.naturalWidth / img.naturalHeight;
+    let w, h;
+    if (aspect >= 1) {
+      w = 0.4;
+      h = 0.4 / aspect * (canvas.width / canvas.height);
+    } else {
+      h = 0.4;
+      w = 0.4 * aspect * (canvas.height / canvas.width);
+    }
+    const shape = { type: 'image', img, cx: 0.5, cy: 0.5, w, h, scale: 1.0 };
+    layers[activeLayer].shape = shape;
+    layers[activeLayer].animation = null;
+    updateLayerTabs();
+    drawFrame(playheadPct);
+    checkExportReady();
+    setStatus(`Image placed on layer ${activeLayer + 1}. Click it to resize, then switch to Record mode to animate.`);
+  };
+  img.src = url;
+  // Reset so the same file can be re-selected
+  e.target.value = '';
 });
 
 const colorInput = document.getElementById('color-input');
@@ -213,6 +254,8 @@ function setAppMode(mode) {
   // Active / inactive states
   btnDraw.classList.toggle('active', mode === 'draw');
   btnRecord.classList.toggle('active', mode === 'record');
+  document.getElementById('draw-tools').classList.toggle('hidden', mode !== 'draw');
+  document.getElementById('record-tools').classList.toggle('hidden', mode !== 'record');
   if (mode === 'draw') {
     setStatus('Draw mode — drag on the canvas to place a shape, or click an existing shape to edit it');
   } else {
@@ -288,6 +331,9 @@ function hitTestShape(shape, px, py) {
     if (len2 === 0) return Math.hypot(mx-x1, my-y1) < 12;
     const t = Math.max(0, Math.min(1, ((mx-x1)*(x2-x1)+(my-y1)*(y2-y1)) / len2));
     return Math.hypot(mx-(x1+t*(x2-x1)), my-(y1+t*(y2-y1))) < 12;
+  } else if (shape.type === 'image') {
+    return px >= shape.cx - shape.w / 2 && px <= shape.cx + shape.w / 2 &&
+           py >= shape.cy - shape.h / 2 && py <= shape.cy + shape.h / 2;
   }
   return false;
 }
@@ -302,8 +348,12 @@ let   inspecting   = false;
 
 function openInspector(shape, anchorX, anchorY) {
   inspecting = true;
-  inspColor.value = shape.color;
-  inspColorPrev.style.background = shape.color;
+  const isImage = shape.type === 'image';
+  document.getElementById('insp-color-row').style.display = isImage ? 'none' : '';
+  if (!isImage) {
+    inspColor.value = shape.color;
+    inspColorPrev.style.background = shape.color;
+  }
 
   if (shape.scale == null) shape.scale = 1.0;
   const pct = Math.round(shape.scale * 100);
@@ -368,6 +418,9 @@ function applyScale(shape, newScale) {
     const dx2 = (shape.x2 - cx) * ratio, dy2 = (shape.y2 - cy) * ratio;
     shape.x1 = cx + dx1; shape.y1 = cy + dy1;
     shape.x2 = cx + dx2; shape.y2 = cy + dy2;
+  } else if (shape.type === 'image') {
+    shape.w *= ratio;
+    shape.h *= ratio;
   }
 }
 
@@ -546,8 +599,7 @@ canvas.addEventListener('mouseup', e => {
   drawFrame(playheadPct);
   checkExportReady();
 
-  setAppMode('record');
-  setStatus(`${layerLabel(activeLayer)} drawn. Click it to change colour or size, or press REC to record motion.`);
+  setStatus(`${layerLabel(activeLayer)} drawn. Click it to change colour or size, then switch to Record mode to animate.`);
 });
 
 canvas.addEventListener('mouseleave', e => {
@@ -561,7 +613,6 @@ canvas.addEventListener('mouseleave', e => {
       layers[activeLayer].animation = null;
       updateLayerTabs();
       checkExportReady();
-      setAppMode('record');
     }
     drawFrame(playheadPct);
   }
@@ -663,8 +714,7 @@ canvas.addEventListener('touchend', e => {
   updateLayerTabs();
   drawFrame(playheadPct);
   checkExportReady();
-  setAppMode('record');
-  setStatus(`${layerLabel(activeLayer)} drawn. Tap it to edit, or press REC to record motion.`);
+  setStatus(`${layerLabel(activeLayer)} drawn. Tap it to edit, then switch to Record mode to animate.`);
 }, { passive: false });
 
 canvas.addEventListener('touchcancel', () => {
@@ -920,7 +970,9 @@ exportBtn.addEventListener('click', async () => {
   const offCtx = offCanvas.getContext('2d');
 
   const stream = offCanvas.captureStream(FPS);
-  const recorder = new MediaRecorder(stream, { mimeType: 'video/webm; codecs=vp9' });
+  const mp4Type = 'video/mp4';
+  const mimeType = MediaRecorder.isTypeSupported(mp4Type) ? mp4Type : 'video/webm; codecs=vp9';
+  const recorder = new MediaRecorder(stream, { mimeType });
   const chunks = [];
   recorder.ondataavailable = e => { if (e.data.size > 0) chunks.push(e.data); };
 
@@ -956,10 +1008,11 @@ exportBtn.addEventListener('click', async () => {
 
   if (exportCancelled) { modal.classList.remove('visible'); return; }
 
-  const blob = new Blob(chunks, { type: 'video/webm' });
+  const ext = mimeType.startsWith('video/mp4') ? 'mp4' : 'webm';
+  const blob = new Blob(chunks, { type: mimeType });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
-  a.href = url; a.download = 'motion.webm'; a.click();
+  a.href = url; a.download = `motion.${ext}`; a.click();
   URL.revokeObjectURL(url);
   modal.classList.remove('visible');
 });
