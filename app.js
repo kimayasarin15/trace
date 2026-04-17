@@ -970,9 +970,7 @@ exportBtn.addEventListener('click', async () => {
   const offCtx = offCanvas.getContext('2d');
 
   const stream = offCanvas.captureStream(FPS);
-  const mp4Type = 'video/mp4';
-  const mimeType = MediaRecorder.isTypeSupported(mp4Type) ? mp4Type : 'video/webm; codecs=vp9';
-  const recorder = new MediaRecorder(stream, { mimeType });
+  const recorder = new MediaRecorder(stream, { mimeType: 'video/webm; codecs=vp9' });
   const chunks = [];
   recorder.ondataavailable = e => { if (e.data.size > 0) chunks.push(e.data); };
 
@@ -1008,11 +1006,10 @@ exportBtn.addEventListener('click', async () => {
 
   if (exportCancelled) { modal.classList.remove('visible'); return; }
 
-  const ext = mimeType.startsWith('video/mp4') ? 'mp4' : 'webm';
-  const blob = new Blob(chunks, { type: mimeType });
+  const blob = new Blob(chunks, { type: 'video/webm' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
-  a.href = url; a.download = `motion.${ext}`; a.click();
+  a.href = url; a.download = 'motion.webm'; a.click();
   URL.revokeObjectURL(url);
   modal.classList.remove('visible');
 });
