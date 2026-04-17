@@ -231,6 +231,9 @@
   .layer-tab.active { border-color: var(--text); color: var(--text); background: var(--btn-active); }
   .layer-tab.has-shape { border-color: var(--accent-blue); color: var(--text); }
   .layer-tab.has-animation { border-color: var(--accent); color: var(--text); }
+  .layer-tab.dragging { opacity: 0.35; cursor: grabbing; }
+  .layer-tab.drag-over { border-color: var(--accent-blue); background: rgba(74,108,247,0.2); }
+  .layer-tab[draggable="true"] { cursor: grab; }
 
   #add-layer-btn {
     height: 36px;
@@ -258,8 +261,8 @@
     transition: all 0.15s;
   }
   .ctrl-btn:hover { background: var(--btn-active); }
-  .ctrl-btn.rec-btn { border-color: var(--accent); }
-  .ctrl-btn.rec-btn:hover { background: rgba(255,65,54,0.2); }
+  .ctrl-btn.rec-btn { border-color: var(--accent); background: rgba(255,65,54,0.15); }
+  .ctrl-btn.rec-btn:hover { background: rgba(255,65,54,0.3); }
   .ctrl-btn.rec-btn.recording { background: var(--accent); }
 
   /* "PRESS R" label inside record button — desktop only */

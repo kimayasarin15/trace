@@ -274,43 +274,97 @@ function layerLabel(idx) {
 
 function updateLayerTabs() {
   document.querySelectorAll('.layer-tab').forEach((tab, i) => {
+    tab.dataset.layer = i; // keep in sync after drag reorder
     const layer = layers[i];
     tab.classList.remove('active', 'has-shape', 'has-animation');
     if (i === activeLayer) tab.classList.add('active');
     if (layer && layer.animation) tab.classList.add('has-animation');
     else if (layer && layer.shape) tab.classList.add('has-shape');
-    // Update label to reflect current shape type
     tab.textContent = layerLabel(i);
   });
 }
 
-document.querySelectorAll('.layer-tab').forEach(tab => {
+// ─── LAYER DRAG-TO-REORDER ────────────────────────────────────────────────────
+let dragFromIdx = null;
+
+function attachTabListeners(tab) {
   tab.addEventListener('click', () => {
     if (isRecording || isDrawing) return;
     activeLayer = parseInt(tab.dataset.layer);
     updateLayerTabs();
     setStatus(`${layerLabel(activeLayer)} selected.`);
   });
-});
+
+  tab.setAttribute('draggable', 'true');
+
+  tab.addEventListener('dragstart', e => {
+    if (isRecording || isDrawing) { e.preventDefault(); return; }
+    dragFromIdx = parseInt(tab.dataset.layer);
+    e.dataTransfer.effectAllowed = 'move';
+    tab.classList.add('dragging');
+  });
+
+  tab.addEventListener('dragend', () => {
+    tab.classList.remove('dragging');
+    document.querySelectorAll('.layer-tab').forEach(t => t.classList.remove('drag-over'));
+  });
+
+  tab.addEventListener('dragover', e => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    document.querySelectorAll('.layer-tab').forEach(t => t.classList.remove('drag-over'));
+    tab.classList.add('drag-over');
+  });
+
+  tab.addEventListener('drop', e => {
+    e.preventDefault();
+    const dragToIdx = parseInt(tab.dataset.layer);
+    if (dragFromIdx === null || dragFromIdx === dragToIdx) return;
+
+    // Reorder layers array
+    const [moved] = layers.splice(dragFromIdx, 1);
+    layers.splice(dragToIdx, 0, moved);
+
+    // Reorder DOM tabs to match
+    const row = document.getElementById('layer-row');
+    const tabs = [...document.querySelectorAll('.layer-tab')];
+    const draggedTab = tabs[dragFromIdx];
+    const targetTab  = tabs[dragToIdx];
+    if (dragToIdx < dragFromIdx) {
+      row.insertBefore(draggedTab, targetTab);
+    } else {
+      targetTab.after(draggedTab);
+    }
+
+    // Keep activeLayer pointing at the same layer data
+    if (activeLayer === dragFromIdx) {
+      activeLayer = dragToIdx;
+    } else if (dragFromIdx < dragToIdx) {
+      if (activeLayer > dragFromIdx && activeLayer <= dragToIdx) activeLayer--;
+    } else {
+      if (activeLayer >= dragToIdx && activeLayer < dragFromIdx) activeLayer++;
+    }
+
+    dragFromIdx = null;
+    updateLayerTabs();
+    drawFrame(playheadPct);
+  });
+}
+
+document.querySelectorAll('.layer-tab').forEach(tab => attachTabListeners(tab));
 
 document.getElementById('add-layer-btn').addEventListener('click', () => {
   if (layers.length >= MAX_LAYERS) return;
   layers.push({ shape: null, animation: null });
-  const idx = layers.length - 1;
   const row = document.getElementById('layer-row');
   const addBtn = document.getElementById('add-layer-btn');
   const tab = document.createElement('button');
   tab.className = 'layer-tab';
-  tab.dataset.layer = idx;
-  tab.textContent = layerLabel(idx);
-  tab.addEventListener('click', () => {
-    if (isRecording || isDrawing) return;
-    activeLayer = idx;
-    updateLayerTabs();
-    setStatus(`${layerLabel(idx)} selected.`);
-  });
+  tab.dataset.layer = layers.length - 1;
+  tab.textContent = layerLabel(layers.length - 1);
+  attachTabListeners(tab);
   row.insertBefore(tab, addBtn);
-  activeLayer = idx;
+  activeLayer = layers.length - 1;
   updateLayerTabs();
 });
 
@@ -1184,11 +1238,46 @@ canvasBgInput.addEventListener('input', e => {
   applyBgPreview(pendingBgColor);
 });
 
+// Remap a shape's normalised coords so it keeps the same pixel size after a canvas resize.
+// Animation paths use the same normalised space, so they need the same treatment.
+// Scale a single normalised coordinate from the canvas centre.
+function remapCoord(v, scale) { return 0.5 + (v - 0.5) * scale; }
+
+function remapCoordsAfterResize(oldW, oldH, newW, newH) {
+  const sx = oldW / newW, sy = oldH / newH;
+  layers.forEach(layer => {
+    const s = layer.shape;
+    if (s) {
+      if (s.type === 'rect' || s.type === 'line') {
+        s.x1 = remapCoord(s.x1, sx); s.x2 = remapCoord(s.x2, sx);
+        s.y1 = remapCoord(s.y1, sy); s.y2 = remapCoord(s.y2, sy);
+      } else if (s.type === 'circle') {
+        s.cx = remapCoord(s.cx, sx); s.cy = remapCoord(s.cy, sy);
+        s.r *= Math.min(oldW, oldH) / Math.min(newW, newH);
+      } else if (s.type === 'image') {
+        s.cx = remapCoord(s.cx, sx); s.cy = remapCoord(s.cy, sy);
+        s.w *= sx; s.h *= sy;
+      }
+    }
+    if (layer.animation) {
+      layer.animation.forEach(pt => {
+        pt.x = remapCoord(pt.x, sx);
+        pt.y = remapCoord(pt.y, sy);
+      });
+    }
+  });
+}
+
 // Save — apply both ratio and background
 document.getElementById('canvas-modal-save').addEventListener('click', () => {
+  const oldW = canvas.width, oldH = canvas.height;
   canvasRatio   = pendingRatio;
   canvasBgColor = pendingBgColor;
   resizeCanvas();   // recalculate canvas dimensions for new ratio
+  if (canvas.width !== oldW || canvas.height !== oldH) {
+    remapCoordsAfterResize(oldW, oldH, canvas.width, canvas.height);
+    drawFrame(playheadPct);
+  }
   closeCanvasModal();
 });
 
