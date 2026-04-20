@@ -2,7 +2,7 @@ const STATIC_CACHE = "motion-static-v1";
 const API_CACHE = "motion-api-v1";
 const IMAGE_CACHE = "motion-images-v1";
 
-const STATIC_ASSETS = ["/", "/index.html", "/manifest.json", "/app.js", "/style.css"];
+const STATIC_ASSETS = ["./", "./index.html", "./manifest.json", "./app.js", "./style.css"];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
