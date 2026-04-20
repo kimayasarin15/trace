@@ -70,6 +70,32 @@ function shapeCentre(shape) {
   return { x: (shape.x1 + shape.x2) / 2, y: (shape.y1 + shape.y2) / 2 };
 }
 
+// ─── SHAPE MOVE (draw mode drag) ─────────────────────────────────────────────
+// Snapshot the position coords of a shape so we can move from a clean baseline.
+function snapshotShape(shape) {
+  if (shape.type === 'rect' || shape.type === 'line')
+    return { x1: shape.x1, y1: shape.y1, x2: shape.x2, y2: shape.y2 };
+  if (shape.type === 'circle' || shape.type === 'image')
+    return { cx: shape.cx, cy: shape.cy };
+  return {};
+}
+
+// Apply a normalised delta (ndx, ndy) from a snapshot — avoids float drift.
+function moveShapeByDelta(shape, snap, ndx, ndy) {
+  if (shape.type === 'rect' || shape.type === 'line') {
+    shape.x1 = snap.x1 + ndx; shape.x2 = snap.x2 + ndx;
+    shape.y1 = snap.y1 + ndy; shape.y2 = snap.y2 + ndy;
+  } else if (shape.type === 'circle' || shape.type === 'image') {
+    shape.cx = snap.cx + ndx;
+    shape.cy = snap.cy + ndy;
+  }
+}
+
+let shapeDragStart    = null; // normalised canvas pos where drag began
+let shapeDragSnap     = null; // coord snapshot at drag start
+let shapeDragging     = false; // true once movement exceeds threshold
+let shapeDragClientXY = null; // saved for inspector fallback on tiny moves
+
 function drawShapeCtx(offCtx, shape, W, H, dx, dy) {
   offCtx.save();
   offCtx.fillStyle = shape.color;
@@ -223,6 +249,7 @@ document.getElementById('image-input').addEventListener('change', e => {
   // Reset so the same file can be re-selected
   e.target.value = '';
 });
+
 
 const colorInput = document.getElementById('color-input');
 const colorPreview = document.getElementById('color-preview');
@@ -551,33 +578,51 @@ canvas.addEventListener('mousedown', e => {
   if (isRecording || isPlaying) return;
 
   const pos = canvasPos(e);
-
-  // ── Shape click → open inspector (works in BOTH draw and record mode) ──
-  // This check comes BEFORE the mode guard so you can always click a shape
-  // to edit it, regardless of which mode you're in.
   const layer = layers[activeLayer];
+
   if (!isDrawing && layer.shape && hitTestShape(layer.shape, pos.x, pos.y)) {
-    // Use canvas-area coords (inspector's offset parent), not canvas coords
-    const areaR = canvasArea.getBoundingClientRect();
-    openInspector(layer.shape, e.clientX - areaR.left, e.clientY - areaR.top);
+    if (appMode === 'draw') {
+      // May become a drag-move or a click; decide on mouseup / mousemove
+      shapeDragStart    = pos;
+      shapeDragSnap     = snapshotShape(layer.shape);
+      shapeDragging     = false;
+      shapeDragClientXY = { clientX: e.clientX, clientY: e.clientY };
+    } else {
+      // Record mode — just open inspector
+      const areaR = canvasArea.getBoundingClientRect();
+      openInspector(layer.shape, e.clientX - areaR.left, e.clientY - areaR.top);
+    }
     return;
   }
 
-  // ── Only start a new drawing stroke in draw mode ──
   if (appMode !== 'draw') return;
-
   if (inspecting) { closeInspector(); return; }
   isDrawing = true;
   drawStart = pos;
 });
 
 canvas.addEventListener('mousemove', e => {
-  // ── Hover cursor: show pointer when hovering over a clickable shape ──
+  // ── Shape drag-move in draw mode ──
+  if (shapeDragStart) {
+    const cur  = canvasPos(e);
+    const ndx  = cur.x - shapeDragStart.x;
+    const ndy  = cur.y - shapeDragStart.y;
+    if (!shapeDragging && Math.hypot(ndx * canvas.width, ndy * canvas.height) > 4)
+      shapeDragging = true;
+    if (shapeDragging) {
+      const layer = layers[activeLayer];
+      if (layer.shape) { moveShapeByDelta(layer.shape, shapeDragSnap, ndx, ndy); drawFrame(playheadPct); }
+      canvas.style.cursor = 'grabbing';
+    }
+    return;
+  }
+
+  // ── Hover cursor ──
   if (!isDrawing && !isRecording && !isPlaying) {
-    const hPos = canvasPos(e);
+    const hPos   = canvasPos(e);
     const hLayer = layers[activeLayer];
     if (hLayer.shape && hitTestShape(hLayer.shape, hPos.x, hPos.y)) {
-      canvas.style.cursor = 'pointer';
+      canvas.style.cursor = appMode === 'draw' ? 'grab' : 'pointer';
     } else {
       updateCursor();
     }
@@ -614,9 +659,10 @@ canvas.addEventListener('mousemove', e => {
     const layer = layers[activeLayer];
     if (layer.shape) {
       const centre = shapeCentre(layer.shape);
-      const dx = (x - centre.x) * canvas.width;
-      const dy = (y - centre.y) * canvas.height;
-      drawShape(layer.shape, dx, dy);
+      // Use same offset as stopRecording so live preview matches final animation
+      const xOff = centre.x - recordedPath[0].x;
+      const yOff = centre.y - recordedPath[0].y;
+      drawShape(layer.shape, (x + xOff - centre.x) * canvas.width, (y + yOff - centre.y) * canvas.height);
     }
     if (recordedPath.length > 1) {
       ctx.save();
@@ -635,6 +681,21 @@ canvas.addEventListener('mousemove', e => {
 });
 
 canvas.addEventListener('mouseup', e => {
+  // ── Finish shape drag / treat as click ──
+  if (shapeDragStart) {
+    if (!shapeDragging) {
+      const layer = layers[activeLayer];
+      if (layer.shape) {
+        const areaR = canvasArea.getBoundingClientRect();
+        openInspector(layer.shape, shapeDragClientXY.clientX - areaR.left, shapeDragClientXY.clientY - areaR.top);
+      }
+    }
+    shapeDragStart = shapeDragSnap = shapeDragClientXY = null;
+    shapeDragging = false;
+    updateCursor();
+    return;
+  }
+
   if (appMode !== 'draw' || !isDrawing || !drawStart) return;
   isDrawing = false;
   const end = canvasPos(e);
@@ -657,6 +718,11 @@ canvas.addEventListener('mouseup', e => {
 });
 
 canvas.addEventListener('mouseleave', e => {
+  if (shapeDragStart) {
+    shapeDragStart = shapeDragSnap = shapeDragClientXY = null;
+    shapeDragging = false;
+    updateCursor();
+  }
   if (isDrawing) {
     isDrawing = false;
     const end = canvasPos(e);
@@ -686,12 +752,18 @@ canvas.addEventListener('touchstart', e => {
   if (isRecording || isPlaying) return;
   const pt  = touchPt(e);
   const pos = canvasPos(pt);
-
-  // Tap on existing shape → open inspector
   const layer = layers[activeLayer];
+
   if (!isDrawing && layer.shape && hitTestShape(layer.shape, pos.x, pos.y)) {
-    const areaR = canvasArea.getBoundingClientRect();
-    openInspector(layer.shape, pt.clientX - areaR.left, pt.clientY - areaR.top);
+    if (appMode === 'draw') {
+      shapeDragStart    = pos;
+      shapeDragSnap     = snapshotShape(layer.shape);
+      shapeDragging     = false;
+      shapeDragClientXY = { clientX: pt.clientX, clientY: pt.clientY };
+    } else {
+      const areaR = canvasArea.getBoundingClientRect();
+      openInspector(layer.shape, pt.clientX - areaR.left, pt.clientY - areaR.top);
+    }
     return;
   }
 
@@ -704,6 +776,20 @@ canvas.addEventListener('touchstart', e => {
 canvas.addEventListener('touchmove', e => {
   e.preventDefault();
   const pt = touchPt(e);
+
+  // ── Shape drag-move (touch) ──
+  if (shapeDragStart) {
+    const cur = canvasPos(pt);
+    const ndx = cur.x - shapeDragStart.x;
+    const ndy = cur.y - shapeDragStart.y;
+    if (!shapeDragging && Math.hypot(ndx * canvas.width, ndy * canvas.height) > 4)
+      shapeDragging = true;
+    if (shapeDragging) {
+      const layer = layers[activeLayer];
+      if (layer.shape) { moveShapeByDelta(layer.shape, shapeDragSnap, ndx, ndy); drawFrame(playheadPct); }
+    }
+    return;
+  }
 
   if (appMode === 'draw' && isDrawing && drawStart) {
     const cur   = canvasPos(pt);
@@ -726,9 +812,9 @@ canvas.addEventListener('touchmove', e => {
     const layer = layers[activeLayer];
     if (layer.shape) {
       const centre = shapeCentre(layer.shape);
-      drawShape(layer.shape,
-        (x - centre.x) * canvas.width,
-        (y - centre.y) * canvas.height);
+      const xOff = centre.x - recordedPath[0].x;
+      const yOff = centre.y - recordedPath[0].y;
+      drawShape(layer.shape, (x + xOff - centre.x) * canvas.width, (y + yOff - centre.y) * canvas.height);
     }
     // Draw trail
     if (recordedPath.length > 1) {
@@ -749,6 +835,18 @@ canvas.addEventListener('touchmove', e => {
 
 canvas.addEventListener('touchend', e => {
   e.preventDefault();
+  if (shapeDragStart) {
+    if (!shapeDragging) {
+      const layer = layers[activeLayer];
+      if (layer.shape) {
+        const areaR = canvasArea.getBoundingClientRect();
+        openInspector(layer.shape, shapeDragClientXY.clientX - areaR.left, shapeDragClientXY.clientY - areaR.top);
+      }
+    }
+    shapeDragStart = shapeDragSnap = shapeDragClientXY = null;
+    shapeDragging = false;
+    return;
+  }
   if (appMode !== 'draw' || !isDrawing || !drawStart) return;
   isDrawing = false;
   const pt    = touchPt(e);
@@ -820,12 +918,16 @@ function stopRecording() {
   canvas.style.cursor = 'crosshair';
 
   if (recordedPath.length > 1) {
-    const t0 = recordedPath[0].t;
+    const t0   = recordedPath[0].t;
     const tEnd = recordedPath[recordedPath.length-1].t - t0;
-    const dur = tEnd > 0 ? tEnd : 1;
+    const dur  = tEnd > 0 ? tEnd : 1;
+    // Offset so the first point maps to the shape's current centre → no jump at t=0
+    const centre = shapeCentre(layers[activeLayer].shape);
+    const xOff = centre.x - recordedPath[0].x;
+    const yOff = centre.y - recordedPath[0].y;
     const norm = recordedPath.map(p => ({
       t: (p.t - t0) / dur * recordDuration,
-      x: p.x, y: p.y,
+      x: p.x + xOff, y: p.y + yOff,
     }));
     layers[activeLayer].animation = norm;
     updateLayerTabs();
