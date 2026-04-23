@@ -6,7 +6,7 @@ let layers = [
   { shape: null, animation: null },
 ];
 let activeLayer = 0;
-let currentTool = 'rect';
+let currentTool = null;
 let currentColor = '#ff4136';
 
 // Interaction modes: 'draw' | 'record'
@@ -282,7 +282,7 @@ colorInput.addEventListener('input', e => {
 });
 
 function updateCursor() {
-  canvas.style.cursor = appMode === 'draw' ? 'crosshair' : 'default';
+  canvas.style.cursor = (appMode === 'draw' && currentTool) ? 'crosshair' : 'default';
 }
 
 // ─── MODE SWITCHING ───────────────────────────────────────────────────────────
@@ -307,6 +307,8 @@ function setAppMode(mode) {
   document.getElementById('draw-tools').classList.toggle('hidden', mode !== 'draw');
   document.getElementById('record-tools').classList.toggle('hidden', mode !== 'record');
   if (mode === 'draw') {
+    currentTool = null;
+    document.querySelectorAll('.tool-btn[id^="tool-"]').forEach(b => b.classList.remove('active'));
     setStatus('Draw mode — drag on the canvas to place a shape, or click an existing shape to edit it');
   } else {
     setStatus('Record mode — click a shape to edit it, or press REC to record motion');
@@ -635,6 +637,7 @@ canvas.addEventListener('mousedown', e => {
   }
 
   if (appMode !== 'draw') return;
+  if (!currentTool) return;
   if (inspecting) { closeInspector(); return; }
   isDrawing = true;
   drawStart = pos;
@@ -807,6 +810,7 @@ canvas.addEventListener('touchstart', e => {
   }
 
   if (appMode !== 'draw') return;
+  if (!currentTool) return;
   if (inspecting) { closeInspector(); return; }
   isDrawing = true;
   drawStart = pos;
