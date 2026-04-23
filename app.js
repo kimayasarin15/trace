@@ -244,33 +244,41 @@ document.getElementById('tool-image').addEventListener('click', () => {
   document.getElementById('image-input').click();
 });
 
-document.getElementById('image-input').addEventListener('change', async e => {
+document.getElementById('image-input').addEventListener('change', e => {
   const file = e.target.files[0];
   if (!file) return;
   // Reset so the same file can be re-selected
   e.target.value = '';
 
-  // createImageBitmap gives a fully-decoded GPU-ready image that renders
-  // correctly on both the live canvas and the offscreen export canvas.
-  const bitmap = await createImageBitmap(file);
-  const aspect = bitmap.width / bitmap.height;
-  let w, h;
-  // Fit image so its longest dimension is 40% of the canvas
-  if (aspect >= 1) {
-    w = 0.4;
-    h = 0.4 / aspect * (canvas.width / canvas.height);
-  } else {
-    h = 0.4;
-    w = 0.4 * aspect * (canvas.height / canvas.width);
-  }
-  const shape = { type: 'image', img: bitmap, cx: 0.5, cy: 0.5, w, h, scale: 1.0 };
-  layers[activeLayer].shape = shape;
-  layers[activeLayer].animation = null;
-  updateLayerTabs();
-  drawFrame(playheadPct);
-  checkExportReady();
-  setStatus(`Image placed on layer ${activeLayer + 1}. Click it to resize, then switch to Record mode to animate.`);
-  autoAdvanceLayer();
+  // Use FileReader to load as a data URL — Chrome treats data URLs as
+  // same-origin so drawImage won't taint the canvas, keeping captureStream
+  // working correctly during export.
+  const reader = new FileReader();
+  reader.onload = re => {
+    const img = new Image();
+    img.onload = () => {
+      const aspect = img.naturalWidth / img.naturalHeight;
+      let w, h;
+      // Fit image so its longest dimension is 40% of the canvas
+      if (aspect >= 1) {
+        w = 0.4;
+        h = 0.4 / aspect * (canvas.width / canvas.height);
+      } else {
+        h = 0.4;
+        w = 0.4 * aspect * (canvas.height / canvas.width);
+      }
+      const shape = { type: 'image', img, cx: 0.5, cy: 0.5, w, h, scale: 1.0 };
+      layers[activeLayer].shape = shape;
+      layers[activeLayer].animation = null;
+      updateLayerTabs();
+      drawFrame(playheadPct);
+      checkExportReady();
+      setStatus(`Image placed on layer ${activeLayer + 1}. Click it to resize, then switch to Record mode to animate.`);
+      autoAdvanceLayer();
+    };
+    img.src = re.target.result;
+  };
+  reader.readAsDataURL(file);
 });
 
 
