@@ -1441,3 +1441,6 @@ function registerServiceWorker() {
 }
 
 registerServiceWorker();
+
+// Ensure no tool button is highlighted on load
+document.querySelectorAll('.tool-btn[id^="tool-"]').forEach(b => b.classList.remove('active'));
