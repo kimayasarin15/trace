@@ -180,6 +180,7 @@ function getPositionAtTime(anim, t) {
   return { x: anim[anim.length-1].x, y: anim[anim.length-1].y };
 }
 
+
 function drawFrame(pct) {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   // Fill background colour
