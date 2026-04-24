@@ -274,7 +274,6 @@ document.getElementById('image-input').addEventListener('change', e => {
       drawFrame(playheadPct);
       checkExportReady();
       setStatus(`Image placed on layer ${activeLayer + 1}. Click it to resize, then switch to Record mode to animate.`);
-      autoAdvanceLayer();
     };
     img.src = re.target.result;
   };
@@ -764,7 +763,6 @@ canvas.addEventListener('mouseup', e => {
   drawFrame(playheadPct);
   checkExportReady();
   setStatus(`${layerLabel(activeLayer)} drawn. Click it to change colour or size, then switch to Record mode to animate.`);
-  autoAdvanceLayer();
 });
 
 canvas.addEventListener('mouseleave', e => {
@@ -918,7 +916,6 @@ canvas.addEventListener('touchend', e => {
   drawFrame(playheadPct);
   checkExportReady();
   setStatus(`${layerLabel(activeLayer)} drawn. Tap it to edit, then switch to Record mode to animate.`);
-  autoAdvanceLayer();
 }, { passive: false });
 
 canvas.addEventListener('touchcancel', () => {
@@ -1120,6 +1117,10 @@ document.addEventListener('keydown', e => {
   if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
 
   if (e.key === 'r' || e.key === 'R') recBtn.click();
+
+  if ((e.key === 'l' || e.key === 'L') && appMode === 'draw') {
+    document.getElementById('add-layer-btn').click();
+  }
 
   // Escape closes the inspector
   if (e.key === 'Escape' && inspecting) {
