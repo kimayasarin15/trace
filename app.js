@@ -214,6 +214,7 @@ function doDelete() {
     drawFrame(playheadPct);
     checkExportReady();
     setStatus(`Animation cleared from ${layerLabel(activeLayer)}. Tap delete again to remove the shape.`);
+    markUnsaved();
   } else if (layer.shape) {
     layer.shape = null;
     updateLayerTabs();
@@ -221,6 +222,7 @@ function doDelete() {
     checkExportReady();
     setStatus(`${layerLabel(activeLayer)} cleared.`);
     setAppMode('draw');
+    markUnsaved();
   }
 }
 
@@ -275,6 +277,7 @@ document.getElementById('image-input').addEventListener('change', e => {
       drawFrame(playheadPct);
       checkExportReady();
       setStatus(`Image placed on layer ${activeLayer + 1}. Click it to resize, then switch to Record mode to animate.`);
+      markUnsaved();
     };
     img.src = re.target.result;
   };
@@ -408,6 +411,7 @@ function attachTabListeners(tab) {
     dragFromIdx = null;
     updateLayerTabs();
     drawFrame(playheadPct);
+    markUnsaved();
   });
 }
 
@@ -426,6 +430,7 @@ document.getElementById('add-layer-btn').addEventListener('click', () => {
   row.insertBefore(tab, addBtn);
   activeLayer = layers.length - 1;
   updateLayerTabs();
+  markUnsaved();
 });
 
 // Creates a new empty layer and activates it (called after placing a shape/image)
@@ -509,6 +514,7 @@ function closeInspector() {
   inspector.classList.remove('visible');
   inspecting = false;
   drawFrame(playheadPct);
+  markUnsaved();
 }
 
 inspColor.addEventListener('input', e => {
@@ -739,6 +745,9 @@ canvas.addEventListener('mouseup', e => {
         const areaR = canvasArea.getBoundingClientRect();
         openInspector(layer.shape, shapeDragClientXY.clientX - areaR.left, shapeDragClientXY.clientY - areaR.top);
       }
+    } else {
+      // Shape was moved — persist the new position
+      markUnsaved();
     }
     shapeDragStart = shapeDragSnap = shapeDragClientXY = null;
     shapeDragging = false;
@@ -764,6 +773,7 @@ canvas.addEventListener('mouseup', e => {
   drawFrame(playheadPct);
   checkExportReady();
   setStatus(`${layerLabel(activeLayer)} drawn. Click it to change colour or size, then switch to Record mode to animate.`);
+  markUnsaved();
 });
 
 canvas.addEventListener('mouseleave', e => {
@@ -782,6 +792,7 @@ canvas.addEventListener('mouseleave', e => {
       layers[activeLayer].animation = null;
       updateLayerTabs();
       checkExportReady();
+      markUnsaved();
     }
     drawFrame(playheadPct);
   }
@@ -892,6 +903,8 @@ canvas.addEventListener('touchend', e => {
         const areaR = canvasArea.getBoundingClientRect();
         openInspector(layer.shape, shapeDragClientXY.clientX - areaR.left, shapeDragClientXY.clientY - areaR.top);
       }
+    } else {
+      markUnsaved();
     }
     shapeDragStart = shapeDragSnap = shapeDragClientXY = null;
     shapeDragging = false;
@@ -917,6 +930,7 @@ canvas.addEventListener('touchend', e => {
   drawFrame(playheadPct);
   checkExportReady();
   setStatus(`${layerLabel(activeLayer)} drawn. Tap it to edit, then switch to Record mode to animate.`);
+  markUnsaved();
 }, { passive: false });
 
 canvas.addEventListener('touchcancel', () => {
@@ -985,6 +999,7 @@ function stopRecording() {
     checkExportReady();
     setPlayhead(0);
     drawFrame(0);
+    markUnsaved();
   } else {
     setStatus('Recording too short — try again.');
   }
@@ -1424,6 +1439,7 @@ document.getElementById('canvas-modal-save').addEventListener('click', () => {
     drawFrame(playheadPct);
   }
   closeCanvasModal();
+  markUnsaved();
 });
 
 document.getElementById('canvas-modal-cancel').addEventListener('click', closeCanvasModal);
@@ -1455,6 +1471,136 @@ function registerServiceWorker() {
 }
 
 registerServiceWorker();
+
+// ─── LOCAL STORAGE PERSISTENCE ────────────────────────────────────────────────
+const STORAGE_KEY = 'track-project-v1';
+const saveBtn = document.getElementById('save-btn');
+let hasUnsaved = false;
+
+// Mark the project as having unsaved changes — called after every mutation
+function markUnsaved() {
+  hasUnsaved = true;
+  saveBtn.classList.add('unsaved');
+  saveBtn.textContent = 'SAVE';
+}
+
+// Persist the full project to localStorage — only called explicitly
+function saveState() {
+  try {
+    const serialized = layers.map(layer => {
+      const s = layer.shape;
+      let shapeSer = null;
+      if (s) {
+        if (s.type === 'image') {
+          // Store the data URL string — the Image element itself isn't serialisable
+          shapeSer = { type: 'image', src: s.img.src, cx: s.cx, cy: s.cy, w: s.w, h: s.h, scale: s.scale };
+        } else {
+          shapeSer = { ...s };
+        }
+      }
+      return { shape: shapeSer, animation: layer.animation };
+    });
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({
+      layers: serialized,
+      activeLayer,
+      canvasRatio,
+      canvasBgColor,
+      recordDuration,
+    }));
+    // Update button to show saved state
+    hasUnsaved = false;
+    saveBtn.classList.remove('unsaved');
+    saveBtn.classList.add('saved-flash');
+    saveBtn.textContent = '✓ SAVED';
+    setTimeout(() => {
+      saveBtn.classList.remove('saved-flash');
+      saveBtn.textContent = 'SAVE';
+    }, 1500);
+  } catch (err) {
+    console.warn('Could not save to localStorage:', err);
+  }
+}
+
+saveBtn.addEventListener('click', saveState);
+
+// Cmd+S / Ctrl+S
+document.addEventListener('keydown', e => {
+  if ((e.metaKey || e.ctrlKey) && e.key === 's') {
+    e.preventDefault();
+    saveState();
+  }
+});
+
+function loadState() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return;
+    const state = JSON.parse(raw);
+    if (!state || !Array.isArray(state.layers) || state.layers.length === 0) return;
+
+    // Restore settings
+    if (state.canvasRatio && RATIOS[state.canvasRatio]) canvasRatio = state.canvasRatio;
+    if (state.canvasBgColor) canvasBgColor = state.canvasBgColor;
+    if (typeof state.recordDuration === 'number') {
+      recordDuration = state.recordDuration;
+      const sel = document.getElementById('duration-select');
+      if (sel) sel.value = recordDuration;
+    }
+    activeLayer = (typeof state.activeLayer === 'number' && state.activeLayer < state.layers.length)
+      ? state.activeLayer : 0;
+
+    // Rebuild layer tabs DOM to match the saved layer count
+    const row    = document.getElementById('layer-row');
+    const addBtn = document.getElementById('add-layer-btn');
+    document.querySelectorAll('.layer-tab').forEach(t => t.remove());
+
+    layers = state.layers.map(() => ({ shape: null, animation: null }));
+
+    state.layers.forEach((_, i) => {
+      const tab = document.createElement('button');
+      tab.className = 'layer-tab';
+      tab.dataset.layer = i;
+      tab.textContent = 'EMPTY ' + (i + 1);
+      attachTabListeners(tab);
+      row.insertBefore(tab, addBtn);
+    });
+
+    // Restore shapes — image shapes need an async Image load
+    let pending = 0;
+    function onAllReady() {
+      if (--pending > 0) return;
+      finish();
+    }
+    function finish() {
+      updateLayerTabs();
+      applyBgPreview(canvasBgColor);
+      resizeCanvas();
+      checkExportReady();
+    }
+
+    state.layers.forEach((layerData, i) => {
+      layers[i].animation = layerData.animation || null;
+      const s = layerData.shape;
+      if (!s) return;
+      if (s.type === 'image') {
+        pending++;
+        const img = new Image();
+        img.onload  = () => { layers[i].shape = { type: 'image', img, cx: s.cx, cy: s.cy, w: s.w, h: s.h, scale: s.scale }; onAllReady(); };
+        img.onerror = () => onAllReady();   // skip images that can't be restored
+        img.src = s.src;
+      } else {
+        layers[i].shape = { ...s };
+      }
+    });
+
+    if (pending === 0) finish();
+
+  } catch (err) {
+    console.warn('Could not restore from localStorage:', err);
+  }
+}
+
+loadState();
 
 // Ensure no tool button is highlighted on load
 document.querySelectorAll('.tool-btn[id^="tool-"]').forEach(b => b.classList.remove('active'));
