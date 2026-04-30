@@ -218,21 +218,40 @@ function drawFrame(pct) {
 function doDelete() {
   if (isRecording || isPlaying || isDrawing) return;
   const layer = layers[activeLayer];
+  if (!layer.animation && !layer.shape) return;
+
   if (layer.animation) {
+    // First delete: clear animation only, keep the shape
     layer.animation = null;
     updateLayerTabs();
     drawFrame(playheadPct);
     checkExportReady();
-    setStatus(`Animation cleared from ${layerLabel(activeLayer)}. Tap delete again to remove the shape.`);
+    setStatus(`Animation cleared from ${layerLabel(activeLayer)}. Delete again to remove the layer.`);
     markUnsaved();
   } else if (layer.shape) {
-    layer.shape = null;
-    updateLayerTabs();
-    drawFrame(playheadPct);
-    checkExportReady();
-    setStatus(`${layerLabel(activeLayer)} cleared.`);
-    setAppMode('draw');
-    markUnsaved();
+    if (layers.length === 1) {
+      // Last remaining layer — just clear it, don't remove the tab
+      layer.shape = null;
+      updateLayerTabs();
+      drawFrame(playheadPct);
+      checkExportReady();
+      setStatus(`${layerLabel(activeLayer)} cleared.`);
+      setAppMode('draw');
+      markUnsaved();
+    } else {
+      // Remove the layer and its tab entirely
+      const name = layerLabel(activeLayer);
+      layers.splice(activeLayer, 1);
+      const tabs = [...document.querySelectorAll('.layer-tab')];
+      tabs[activeLayer].remove();
+      activeLayer = Math.min(activeLayer, layers.length - 1);
+      updateLayerTabs();
+      drawFrame(playheadPct);
+      checkExportReady();
+      setStatus(`${name} removed.`);
+      setAppMode('draw');
+      markUnsaved();
+    }
   }
 }
 
@@ -341,7 +360,7 @@ function setAppMode(mode) {
 // Returns a short display label for a layer, e.g. "CIRCLE 1", "RECT 2", "LINE 3"
 function layerLabel(idx) {
   const shape = layers[idx] && layers[idx].shape;
-  const typeName = shape ? shape.type.toUpperCase() : 'EMPTY';
+  const typeName = shape ? shape.type.toUpperCase() : 'LAYER';
   return `${typeName} ${idx + 1}`;
 }
 
@@ -426,6 +445,17 @@ function attachTabListeners(tab) {
 }
 
 document.querySelectorAll('.layer-tab').forEach(tab => attachTabListeners(tab));
+
+// Allow drops anywhere on the row, not just exactly on a tab
+document.getElementById('layer-row').addEventListener('dragover', e => {
+  e.preventDefault();
+  e.dataTransfer.dropEffect = 'move';
+});
+document.getElementById('layer-row').addEventListener('dragleave', e => {
+  if (!e.currentTarget.contains(e.relatedTarget)) {
+    document.querySelectorAll('.layer-tab').forEach(t => t.classList.remove('drag-over'));
+  }
+});
 
 document.getElementById('add-layer-btn').addEventListener('click', () => {
   if (layers.length >= MAX_LAYERS) return;
@@ -1769,7 +1799,7 @@ function loadState() {
       const tab = document.createElement('button');
       tab.className = 'layer-tab';
       tab.dataset.layer = i;
-      tab.textContent = 'EMPTY ' + (i + 1);
+      tab.textContent = layerLabel(i);
       attachTabListeners(tab);
       row.insertBefore(tab, addBtn);
     });
