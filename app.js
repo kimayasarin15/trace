@@ -1416,7 +1416,7 @@ const HELP_STEPS = [
   },
   {
     title: 'Record',
-    body: 'In Record mode, to animate a shape hit the REC button (or press <strong>R</strong>), then move your cursor across the canvas; recording stops automatically when the set duration runs out. You can edit the duration at anytime.',
+    body: 'In Record mode, to animate a shape hit the REC button (or press <strong>R</strong>), then move your cursor across the canvas; objects will move from their center point. Recording stops automatically when the set duration runs out. You can edit the duration at anytime.',
   },
   {
     title: 'Playback',

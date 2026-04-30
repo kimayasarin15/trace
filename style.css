@@ -268,6 +268,8 @@
   .ctrl-btn.rec-btn { border-color: var(--accent); background: rgba(255,65,54,0.15); }
   .ctrl-btn.rec-btn:hover { background: rgba(255,65,54,0.3); }
   .ctrl-btn.rec-btn.recording { background: var(--accent); }
+  .ctrl-btn.rec-btn.recording .rec-btn-label { color: white; }
+  .ctrl-btn.rec-btn.recording svg circle { fill: white; }
 
   /* "PRESS R" label inside record button — desktop only */
   .rec-btn-label {
