@@ -286,7 +286,7 @@ document.getElementById('image-input').addEventListener('change', e => {
       updateLayerTabs();
       drawFrame(playheadPct);
       checkExportReady();
-      setStatus(`Image placed on layer ${activeLayer + 1}. Click it to resize, then switch to Record mode to animate.`);
+      setStatus(`Image placed on layer ${activeLayer + 1}. Click it to resize.`);
       markUnsaved();
     };
     img.src = re.target.result;
@@ -330,9 +330,9 @@ function setAppMode(mode) {
   if (mode === 'draw') {
     currentTool = null;
     document.querySelectorAll('.tool-btn[id^="tool-"]').forEach(b => b.classList.remove('active'));
-    setStatus('Draw mode — drag on the canvas to place a shape, or click an existing shape to edit it');
+    setStatus('Draw mode — add an image, text or shape to the canvas, or click an layer to edit it');
   } else {
-    setStatus('Record mode — click a shape to edit it, or press REC to record motion');
+    setStatus('Record mode — press REC to record motion and move your mouse on the trackpad');
   }
   updateCursor();
 }
@@ -809,7 +809,7 @@ canvas.addEventListener('mouseup', e => {
   updateLayerTabs();
   drawFrame(playheadPct);
   checkExportReady();
-  setStatus(`${layerLabel(activeLayer)} drawn. Click it to change colour or size, then switch to Record mode to animate.`);
+  setStatus(`${layerLabel(activeLayer)} drawn. Click it to change color or size.`);
   markUnsaved();
 });
 
@@ -1408,27 +1408,31 @@ const HELP_STEPS = [
   },
   {
     title: 'Draw',
-    body: 'Select a shape type (circle, square, or line) from the toolbar and picking a color, then drag on the canvas to draw it onto the active layer. Use the layer tabs at the bottom to switch or add between layers, each one holds a single shape and its own recorded motion path. ',
+    body: 'Select an image, text or shape from the toolbar and pick a color, then drag on the canvas to draw it onto the active layer. Use the layer tabs at the bottom to add or switch between layers, each one holds a single object and will have its own recorded motion path. ',
+  },
+  {
+    title: 'Edit',
+    body: 'When a layer is selected, you can click on the object to change its size and color where applicable.',
   },
   {
     title: 'Record',
-    body: 'To animate a shape, switch to Record mode and hit the REC button (or press <strong>R</strong>), then move your cursor across the canvas; recording stops automatically when the set duration runs out. You can edit the duration at anytime.',
+    body: 'In Record mode, to animate a shape hit the REC button (or press <strong>R</strong>), then move your cursor across the canvas; recording stops automatically when the set duration runs out. You can edit the duration at anytime.',
   },
   {
     title: 'Playback',
     body: 'Once recording stops, press the <strong>▶ Play</strong> button to watch your shape animate along the recorded path. You can also scrub the timeline to jump to any moment.',
   },
   {
-    title: 'Axis-lock',
-    body: 'Hold <strong>Shift</strong> while recording to snap movement to a single axis — horizontal or vertical — based on whichever direction you move first.',
-  },
-  {
     title: 'Delete',
     body: 'With a layer selected, press <strong>Delete</strong> to remove its recording while keeping the shape in place. Press <strong>Delete</strong> again (with no recording) to remove the shape entirely.',
   },
   {
+    title: 'Save',
+    body: 'Saving stores your draft in your browser locally, so it will not survive a hard refresh or incognito mode. Export any completed projects to make sure you do not lose any work.',
+  },
+  {
     title: 'Export',
-    body: 'When you are done, click the the <strong>Export</strong> button to render and download your animation.',
+    body: 'When you are done, click the <strong>Export</strong> button to render and download your animation as a WebM file.',
   },
 ];
 
