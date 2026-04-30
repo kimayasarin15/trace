@@ -560,26 +560,26 @@
 
   /* Help modal overlay */
   #help-modal {
-    display: none;
-    position: fixed; inset: 0;
-    background: rgba(0,0,0,0.65);
-    z-index: 200;
-    align-items: center;
-    justify-content: center;
+      display: none;
+      position: absolute;
+      top: 80px;
+      right: 20px;
+      z-index: 200; 
   }
-  #help-modal.visible { display: flex; }
+  #help-modal.visible { display: block; }
 
   #help-box {
-    background: var(--panel);
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    padding: 22px 28px 24px;
-    width: 380px;
-    max-width: calc(100vw - 40px);
-    display: flex;
-    flex-direction: column;
-    gap: 14px;
-    box-shadow: 0 16px 48px rgba(0,0,0,0.5);
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 22px 28px 24px;
+      width: 280px;
+      height: 360px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      gap: 14px;
+      box-shadow: 0 16px 48px rgba(0,0,0,0.5);
   }
 
   /* Header row: step label left, ✕ right */
@@ -623,10 +623,10 @@
 
   #help-body {
     font-family: var(--font);
-    font-size: 13px;
+    font-size: 12px;
     color: #c0c0c0;
     line-height: 1.65;
-    min-height: 56px;
+    flex: 1;
   }
 
   #help-footer {
