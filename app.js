@@ -1710,6 +1710,48 @@ document.addEventListener('keydown', e => {
   }
 });
 
+// ─── COPY / PASTE LAYER ───────────────────────────────────────────────────────
+let copiedShape = null;
+
+document.addEventListener('keydown', e => {
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+  if (!(e.metaKey || e.ctrlKey)) return;
+
+  // ⌘C — copy active layer's shape (draw mode only, no animation)
+  if (e.key === 'c' && appMode === 'draw') {
+    const shape = layers[activeLayer].shape;
+    if (!shape) return;
+    // Shallow clone — image shapes share the img element reference (fine for drawing)
+    copiedShape = { ...shape };
+    setStatus(`${layerLabel(activeLayer)} copied. Press ⌘V to paste into a new layer.`);
+  }
+
+  // ⌘V — paste into a new layer
+  if (e.key === 'v' && appMode === 'draw') {
+    if (!copiedShape) return;
+    if (layers.length >= MAX_LAYERS) {
+      setStatus(`Can't paste — layer limit (${MAX_LAYERS}) reached.`);
+      return;
+    }
+    e.preventDefault();
+    layers.push({ shape: { ...copiedShape }, animation: null });
+    const row    = document.getElementById('layer-row');
+    const addBtn = document.getElementById('add-layer-btn');
+    const tab    = document.createElement('button');
+    tab.className    = 'layer-tab';
+    tab.dataset.layer = layers.length - 1;
+    tab.textContent  = layerLabel(layers.length - 1);
+    attachTabListeners(tab);
+    row.insertBefore(tab, addBtn);
+    activeLayer = layers.length - 1;
+    updateLayerTabs();
+    drawFrame(playheadPct);
+    checkExportReady();
+    markUnsaved();
+    setStatus(`Pasted into ${layerLabel(activeLayer)}.`);
+  }
+});
+
 function loadState() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
