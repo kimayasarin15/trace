@@ -1726,24 +1726,15 @@ document.addEventListener('keydown', e => {
     setStatus(`${layerLabel(activeLayer)} copied. Press ⌘V to paste into a new layer.`);
   }
 
-  // ⌘V — paste into a new layer
+  // ⌘V — paste into the currently selected layer (only if empty)
   if (e.key === 'v' && appMode === 'draw') {
     if (!copiedShape) return;
-    if (layers.length >= MAX_LAYERS) {
-      setStatus(`Can't paste — layer limit (${MAX_LAYERS}) reached.`);
+    if (layers[activeLayer].shape) {
+      setStatus(`${layerLabel(activeLayer)} already has a shape — clear it first before pasting.`);
       return;
     }
     e.preventDefault();
-    layers.push({ shape: { ...copiedShape }, animation: null });
-    const row    = document.getElementById('layer-row');
-    const addBtn = document.getElementById('add-layer-btn');
-    const tab    = document.createElement('button');
-    tab.className    = 'layer-tab';
-    tab.dataset.layer = layers.length - 1;
-    tab.textContent  = layerLabel(layers.length - 1);
-    attachTabListeners(tab);
-    row.insertBefore(tab, addBtn);
-    activeLayer = layers.length - 1;
+    layers[activeLayer].shape = { ...copiedShape };
     updateLayerTabs();
     drawFrame(playheadPct);
     checkExportReady();
