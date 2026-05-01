@@ -61,7 +61,7 @@ resizeCanvas();
 // ─── SHAPE MODEL ─────────────────────────────────────────────────────────────
 // Shapes store geometry explicitly rather than just a centre + size.
 // rect:   { type, color, x1, y1, x2, y2 }   (normalised 0-1 coords)
-// circle: { type, color, cx, cy, r }         (normalised)
+// circle: { type, color, cx, cy, rx, ry }    (normalised — rx horizontal, ry vertical; equal = perfect circle)
 // line:   { type, color, x1, y1, x2, y2 }   (normalised)
 // image:  { type, img, cx, cy, w, h, scale } (normalised centre + half-dimensions)
 
@@ -92,6 +92,34 @@ function moveShapeByDelta(shape, snap, ndx, ndy) {
   }
 }
 
+function centreShapeH(shape) {
+  const c = shapeCentre(shape);
+  const dx = 0.5 - c.x;
+  moveShapeByDelta(shape, snapshotShape(shape), dx, 0);
+}
+
+function centreShapeV(shape) {
+  const c = shapeCentre(shape);
+  const dy = 0.5 - c.y;
+  moveShapeByDelta(shape, snapshotShape(shape), 0, dy);
+}
+
+document.getElementById('align-h').addEventListener('click', () => {
+  const shape = layers[activeLayer] && layers[activeLayer].shape;
+  if (!shape || appMode !== 'draw') return;
+  centreShapeH(shape);
+  drawFrame(playheadPct);
+  markUnsaved();
+});
+
+document.getElementById('align-v').addEventListener('click', () => {
+  const shape = layers[activeLayer] && layers[activeLayer].shape;
+  if (!shape || appMode !== 'draw') return;
+  centreShapeV(shape);
+  drawFrame(playheadPct);
+  markUnsaved();
+});
+
 let shapeDragStart    = null; // normalised canvas pos where drag began
 let shapeDragSnap     = null; // coord snapshot at drag start
 let shapeDragging     = false; // true once movement exceeds threshold
@@ -111,9 +139,10 @@ function drawShapeCtx(offCtx, shape, W, H, dx, dy) {
     );
   } else if (shape.type === 'circle') {
     const px = shape.cx * W + dx, py = shape.cy * H + dy;
-    const pr = shape.r * Math.min(W, H);
+    const prx = (shape.rx || shape.r) * W;
+    const pry = (shape.ry || shape.r) * H;
     offCtx.beginPath();
-    offCtx.arc(px, py, pr, 0, Math.PI * 2);
+    offCtx.ellipse(px, py, prx, pry, 0, 0, Math.PI * 2);
     offCtx.fill();
   } else if (shape.type === 'line') {
     const px1 = shape.x1 * W + dx, py1 = shape.y1 * H + dy;
@@ -163,9 +192,10 @@ function drawGhost(shape) {
     );
   } else if (shape.type === 'circle') {
     const px = shape.cx * canvas.width, py = shape.cy * canvas.height;
-    const pr = shape.r * Math.min(canvas.width, canvas.height);
+    const prx = (shape.rx || shape.r) * canvas.width + 2;
+    const pry = (shape.ry || shape.r) * canvas.height + 2;
     ctx.beginPath();
-    ctx.arc(px, py, pr + 2, 0, Math.PI * 2);
+    ctx.ellipse(px, py, prx, pry, 0, 0, Math.PI * 2);
     ctx.stroke();
   }
   ctx.restore();
@@ -242,10 +272,11 @@ function drawSelectionOutline(shape, dx = 0, dy = 0) {
     w = Math.abs(shape.x2 - shape.x1) * W + PAD * 2;
     h = Math.abs(shape.y2 - shape.y1) * H + PAD * 2;
   } else if (shape.type === 'circle') {
-    const r = shape.r * Math.min(W, H) + PAD;
-    x = shape.cx * W + dx - r;
-    y = shape.cy * H + dy - r;
-    w = r * 2; h = r * 2;
+    const prx = (shape.rx || shape.r) * W + PAD;
+    const pry = (shape.ry || shape.r) * H + PAD;
+    x = shape.cx * W + dx - prx;
+    y = shape.cy * H + dy - pry;
+    w = prx * 2; h = pry * 2;
   } else if (shape.type === 'line') {
     x = Math.min(shape.x1, shape.x2) * W + dx - PAD;
     y = Math.min(shape.y1, shape.y2) * H + dy - PAD;
@@ -595,7 +626,8 @@ function hitTestShape(shape, px, py) {
            py >= Math.min(shape.y1, shape.y2) && py <= Math.max(shape.y1, shape.y2);
   } else if (shape.type === 'circle') {
     const dx = (px - shape.cx) * W, dy = (py - shape.cy) * H;
-    return Math.hypot(dx, dy) <= shape.r * Math.min(W, H);
+    const prx = (shape.rx || shape.r) * W, pry = (shape.ry || shape.r) * H;
+    return (dx * dx) / (prx * prx) + (dy * dy) / (pry * pry) <= 1;
   } else if (shape.type === 'line') {
     const x1 = shape.x1*W, y1 = shape.y1*H, x2 = shape.x2*W, y2 = shape.y2*H;
     const mx = px*W, my = py*H;
@@ -692,7 +724,8 @@ function applyScale(shape, newScale) {
     shape.x1 = cx - hw; shape.x2 = cx + hw;
     shape.y1 = cy - hh; shape.y2 = cy + hh;
   } else if (shape.type === 'circle') {
-    shape.r *= ratio;
+    if (shape.rx != null) { shape.rx *= ratio; shape.ry *= ratio; }
+    else shape.r *= ratio;
   } else if (shape.type === 'line') {
     const cx = (shape.x1 + shape.x2) / 2, cy = (shape.y1 + shape.y2) / 2;
     const dx1 = (shape.x1 - cx) * ratio, dy1 = (shape.y1 - cy) * ratio;
@@ -742,21 +775,21 @@ function buildShapeFromDrag(start, end, shiftKey) {
     };
   } else if (currentTool === 'circle') {
     const cx = (start.x + end.x) / 2, cy = (start.y + end.y) / 2;
-    let r;
+    const dxPx = Math.abs(end.x - start.x) * canvas.width;
+    const dyPx = Math.abs(end.y - start.y) * canvas.height;
+    const minR = 4;
+    let rx, ry;
     if (shiftKey) {
-      // Use the smaller axis so the circle fits neatly in a square drag
-      const dxPx = Math.abs(end.x - start.x) * canvas.width;
-      const dyPx = Math.abs(end.y - start.y) * canvas.height;
-      const sizePx = Math.min(dxPx, dyPx);
-      r = Math.max(sizePx / 2 / Math.min(canvas.width, canvas.height),
-                   4 / Math.min(canvas.width, canvas.height));
+      // Shift → perfect circle, use smaller axis
+      const sizePx = Math.max(Math.min(dxPx, dyPx), minR * 2);
+      rx = sizePx / 2 / canvas.width;
+      ry = sizePx / 2 / canvas.height;
     } else {
-      r = Math.max(
-        Math.hypot(end.x - start.x, end.y - start.y) / 2,
-        4 / Math.min(canvas.width, canvas.height)
-      );
+      // Default → free ellipse from drag extents
+      rx = Math.max(dxPx / 2, minR) / canvas.width;
+      ry = Math.max(dyPx / 2, minR) / canvas.height;
     }
-    return { type: 'circle', color: currentColor, cx, cy, r };
+    return { type: 'circle', color: currentColor, cx, cy, rx, ry };
   } else if (currentTool === 'line') {
     let x2 = end.x, y2 = end.y;
     if (shiftKey) {
@@ -916,7 +949,7 @@ canvas.addEventListener('mouseup', e => {
   drawStart = null;
   if (!shape) return;
 
-  const tooSmall = (shape.type === 'circle' && shape.r * Math.min(canvas.width, canvas.height) < 4) ||
+  const tooSmall = (shape.type === 'circle' && Math.min((shape.rx || shape.r) * canvas.width, (shape.ry || shape.r) * canvas.height) < 4) ||
                    (shape.type !== 'circle' && Math.abs(shape.x2 - shape.x1) * canvas.width < 4 &&
                     Math.abs(shape.y2 - shape.y1) * canvas.height < 4);
   if (tooSmall) { drawFrame(playheadPct); return; }
@@ -1090,7 +1123,7 @@ canvas.addEventListener('touchend', e => {
   if (!shape) return;
 
   const tooSmall =
-    (shape.type === 'circle' && shape.r * Math.min(canvas.width, canvas.height) < 4) ||
+    (shape.type === 'circle' && Math.min((shape.rx || shape.r) * canvas.width, (shape.ry || shape.r) * canvas.height) < 4) ||
     (shape.type !== 'circle' && Math.abs(shape.x2 - shape.x1) * canvas.width  < 4 &&
                                 Math.abs(shape.y2 - shape.y1) * canvas.height < 4);
   if (tooSmall) { drawFrame(playheadPct); return; }
@@ -1695,7 +1728,8 @@ function remapCoordsAfterResize(oldW, oldH, newW, newH) {
         s.y1 = remapCoord(s.y1, sy); s.y2 = remapCoord(s.y2, sy);
       } else if (s.type === 'circle') {
         s.cx = remapCoord(s.cx, sx); s.cy = remapCoord(s.cy, sy);
-        s.r *= Math.min(oldW, oldH) / Math.min(newW, newH);
+        if (s.rx != null) { s.rx *= sx; s.ry *= sy; }
+        else s.r *= Math.min(oldW, oldH) / Math.min(newW, newH);
       } else if (s.type === 'image') {
         s.cx = remapCoord(s.cx, sx); s.cy = remapCoord(s.cy, sy);
         s.w *= sx; s.h *= sy;
@@ -1966,7 +2000,14 @@ function loadState() {
         img.onerror = () => onAllReady();   // skip images that can't be restored
         img.src = s.src;
       } else {
-        layers[i].shape = { ...s };
+        const shape = { ...s };
+        // Migrate old saves: circle used a single `r`, now uses rx/ry
+        if (shape.type === 'circle' && shape.r != null && shape.rx == null) {
+          shape.rx = shape.r;
+          shape.ry = shape.r;
+          delete shape.r;
+        }
+        layers[i].shape = shape;
       }
     });
 
