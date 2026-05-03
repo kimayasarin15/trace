@@ -587,14 +587,12 @@
   /* Help modal overlay */
   #help-modal {
       display: none;
-      position: fixed;
-      inset: 0;
+      position: absolute;
+      top: 80px;
+      right: 20px;
       z-index: 200;
-      align-items: center;
-      justify-content: center;
-      background: rgba(0,0,0,0.6);
   }
-  #help-modal.visible { display: flex; }
+  #help-modal.visible { display: block; }
 
   #help-box {
       background: var(--panel);
@@ -1076,6 +1074,17 @@
       width: calc(100vw - 24px);
       padding: 18px 18px 20px;
     }
+
+    /* Help modal centred on mobile */
+    #help-modal {
+      position: fixed;
+      inset: 0;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      background: rgba(0,0,0,0.6);
+    }
+    #help-modal.visible { display: flex; }
 
     /* Inspector full-width */
     #inspector { width: calc(100vw - 32px); }
