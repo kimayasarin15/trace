@@ -220,11 +220,26 @@
 <!-- Export Modal -->
 <div id="modal">
   <div id="modal-box">
-    <h3>Exporting WebM</h3>
-    <p>Rendering frames...</p>
-    <div id="modal-progress-bg"><div id="modal-progress"></div></div>
-    <div id="modal-status"></div>
-    <button id="modal-cancel">Cancel</button>
+    <!-- Phase 1: rendering -->
+    <div id="modal-render-phase">
+      <h3>Exporting WebM</h3>
+      <p>Rendering frames...</p>
+      <div id="modal-progress-bg"><div id="modal-progress"></div></div>
+      <div id="modal-status"></div>
+      <button id="modal-cancel">CANCEL</button>
+    </div>
+    <!-- Phase 2: save -->
+    <div id="modal-save-phase" class="hidden">
+      <h3>Save as</h3>
+      <div id="modal-filename-row">
+        <input type="text" id="modal-filename" placeholder="motion" spellcheck="false" />
+        <span id="modal-filename-ext">.webm</span>
+      </div>
+      <div id="modal-save-footer">
+        <button id="modal-save-cancel">CANCEL</button>
+        <button id="modal-save-done">DONE</button>
+      </div>
+    </div>
   </div>
 </div>
 

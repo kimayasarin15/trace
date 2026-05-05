@@ -1479,6 +1479,8 @@ let exportCancelled = false;
 exportBtn.addEventListener('click', async () => {
   if (exportBtn.disabled) return;
   modal.classList.add('visible');
+  document.getElementById('modal-render-phase').classList.remove('hidden');
+  document.getElementById('modal-save-phase').classList.add('hidden');
   exportCancelled = false;
   modalProgress.style.width = '0%';
   modalStatus.textContent = '';
@@ -1533,11 +1535,28 @@ exportBtn.addEventListener('click', async () => {
   if (exportCancelled) { modal.classList.remove('visible'); return; }
 
   const blob = new Blob(chunks, { type: 'video/webm' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url; a.download = 'motion.webm'; a.click();
-  URL.revokeObjectURL(url);
-  modal.classList.remove('visible');
+  const exportUrl = URL.createObjectURL(blob);
+
+  // Switch to save phase
+  document.getElementById('modal-render-phase').classList.add('hidden');
+  const savePhase = document.getElementById('modal-save-phase');
+  savePhase.classList.remove('hidden');
+  const filenameInput = document.getElementById('modal-filename');
+  filenameInput.value = '';
+  filenameInput.focus();
+
+  document.getElementById('modal-save-done').onclick = () => {
+    const filename = (filenameInput.value.trim() || 'motion') + '.webm';
+    const a = document.createElement('a');
+    a.href = exportUrl; a.download = filename; a.click();
+    URL.revokeObjectURL(exportUrl);
+    modal.classList.remove('visible');
+  };
+
+  document.getElementById('modal-save-cancel').onclick = () => {
+    URL.revokeObjectURL(exportUrl);
+    modal.classList.remove('visible');
+  };
 });
 
 document.getElementById('modal-cancel').addEventListener('click', () => {

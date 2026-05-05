@@ -7,16 +7,44 @@
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
   :root {
+    /* Surfaces */
     --bg: #1a1a1a;
     --panel: #2a2a2a;
     --panel-light: #333;
+    --canvas-surround: #111;
+    --checker-mid: #555;
+
+    /* Borders */
     --border: #444;
+    --border-hover: #666;
+
+    /* Text */
     --text: #e0e0e0;
+    --text-hover: #ccc;
     --text-dim: #888;
+    --text-body: #c0c0c0;
+
+    /* Accent red */
     --accent: #ff4136;
+    --accent-rgb: 255, 65, 54;
+    --accent-light: #ff7a73;
+
+    /* Accent blue */
     --accent-blue: #4a6cf7;
+    --accent-blue-rgb: 74, 108, 247;
+    --accent-blue-light: #7b9fff;
+
+    /* State */
+    --color-saved: #5a9e6f;
+
+    /* Buttons */
     --btn-bg: #3a3a3a;
     --btn-active: #4a4a4a;
+
+    /* Overlays & misc */
+    --overlay-bg: rgba(0,0,0,0.6);
+    --text-edit-outline: rgba(200, 200, 200, 0.7);
+
     --font: "Geist Mono", monospace;
   }
 
@@ -58,8 +86,8 @@
     transition: all 0.15s;
     position: relative;
   }
-  .tool-btn:hover { background: var(--btn-active); border-color: #666; }
-  .tool-btn.active { border-color: var(--accent-blue); background: rgba(74,108,247,0.15); }
+  .tool-btn:hover { background: var(--btn-active); border-color: var(--border-hover); }
+  .tool-btn.active { border-color: var(--accent-blue); background: rgba(var(--accent-blue-rgb), 0.15); }
 
   .tool-btn svg { pointer-events: none; }
 
@@ -83,7 +111,7 @@
     overflow: hidden;
     position: relative;
   }
-  #color-btn:hover { border-color: #666; }
+  #color-btn:hover { border-color: var(--border-hover); }
   #color-input {
     position: absolute; inset: 0;
     width: 100%; height: 100%;
@@ -93,7 +121,7 @@
   }
   #color-preview {
     width: 100%; height: 100%;
-    background: #ff4136;
+    background: var(--accent);
     pointer-events: none;
   }
 
@@ -112,7 +140,7 @@
   }
   #toolbar-size {
     width: 120px;
-    accent-color: #888;
+    accent-color: var(--text-dim);
     cursor: pointer;
   }
   #toolbar-size-val {
@@ -151,7 +179,7 @@
     display: flex; align-items: center; gap: 6px;
     transition: all 0.15s;
   }
-  #export-btn:hover { background: var(--btn-active); border-color: #666; }
+  #export-btn:hover { background: var(--btn-active); border-color: var(--border-hover); }
   #export-btn:disabled { opacity: 0.4; cursor: not-allowed; }
 
   /* CANVAS AREA */
@@ -159,7 +187,7 @@
     flex: 1;
     position: relative;
     overflow: hidden;
-    background: #111;   /* dark surround so the canvas boundary is clear */
+    background: var(--canvas-surround);   /* dark surround so the canvas boundary is clear */
     cursor: default;
   }
 
@@ -178,7 +206,7 @@
   #rec-overlay {
     position: absolute;
     top: 12px; right: 12px;
-    background: rgba(255,65,54,0.9);
+    background: rgba(var(--accent-rgb), 0.9);
     color: white;
     font-family: var(--font);
     font-size: 12px;
@@ -205,7 +233,7 @@
       left: 12px;
       font-family: var(--font);
       font-size: 11px;
-      color: #999;
+      color: var(--text-dim);
       pointer-events: none;
       max-width: 200px;
       line-height: 1.4;
@@ -261,7 +289,7 @@
   .layer-tab.has-shape { border-color: var(--accent-blue); color: var(--text); }
   .layer-tab.has-animation { border-color: var(--accent); color: var(--text); }
   .layer-tab.dragging { opacity: 0.35; cursor: grabbing; }
-  .layer-tab.drag-over { border-color: var(--accent-blue); background: rgba(74,108,247,0.2); }
+  .layer-tab.drag-over { border-color: var(--accent-blue); background: rgba(var(--accent-blue-rgb), 0.2); }
   .layer-tab[draggable="true"] { cursor: grab; }
 
   #add-layer-btn {
@@ -278,7 +306,7 @@
     white-space: nowrap;
     flex-shrink: 0;
   }
-  #add-layer-btn:hover { border-color: #666; color: var(--text); }
+  #add-layer-btn:hover { border-color: var(--border-hover); color: var(--text); }
 
   .ctrl-btn {
     width: 36px; height: 36px;
@@ -290,8 +318,8 @@
     transition: all 0.15s;
   }
   .ctrl-btn:hover { background: var(--btn-active); }
-  .ctrl-btn.rec-btn { border-color: var(--accent); background: rgba(255,65,54,0.15); }
-  .ctrl-btn.rec-btn:hover { background: rgba(255,65,54,0.3); }
+  .ctrl-btn.rec-btn { border-color: var(--accent); background: rgba(var(--accent-rgb), 0.15); }
+  .ctrl-btn.rec-btn:hover { background: rgba(var(--accent-rgb), 0.3); }
   .ctrl-btn.rec-btn.recording { background: var(--accent); }
   .ctrl-btn.rec-btn.recording .rec-btn-label { color: white; }
   .ctrl-btn.rec-btn.recording svg circle { fill: white; }
@@ -355,7 +383,7 @@
     width: 14px; height: 14px;
     background: var(--accent);
     border-radius: 50%;
-    border: 2px solid #fff;
+    border: 2px solid white;
     left: 0%;
     cursor: grab;
     transition: left 0.05s linear;
@@ -387,22 +415,22 @@
   }
   .mode-btn:hover:not(.active):not(:disabled) {
     background: var(--btn-active);
-    border-color: #666;
+    border-color: var(--border-hover);
     color: var(--text);
   }
 
   /* DRAW active */
   #btn-draw.active {
-    border: 1.5px solid rgba(74,108,247,0.6);
-    background: rgba(74,108,247,0.15);
-    color: #7b9fff;
+    border: 1.5px solid rgba(var(--accent-blue-rgb), 0.6);
+    background: rgba(var(--accent-blue-rgb), 0.15);
+    color: var(--accent-blue-light);
   }
 
   /* RECORD active */
   #btn-record.active {
-    border: 1.5px solid rgba(255,65,54,0.6);
-    background: rgba(255,65,54,0.12);
-    color: #ff7a73;
+    border: 1.5px solid rgba(var(--accent-rgb), 0.6);
+    background: rgba(var(--accent-rgb), 0.12);
+    color: var(--accent-light);
   }
 
   .mode-btn:disabled {
@@ -426,8 +454,8 @@
   #modal {
     display: none;
     position: fixed; inset: 0;
-    background: rgba(0,0,0,0.7);
-    z-index: 100;
+    background: var(--overlay-bg);
+    z-index: 300;
     align-items: center;
     justify-content: center;
   }
@@ -440,17 +468,44 @@
     min-width: 280px;
     text-align: center;
   }
-  #modal-box h3 { font-family: var(--font); font-size: 14px; margin-bottom: 8px; }
+  #modal-box h3 { font-family: var(--font); font-size: 14px; margin-bottom: 12px; }
   #modal-box p { font-size: 13px; color: var(--text-dim); margin-bottom: 20px; }
+  #modal-filename-row {
+    display: flex; align-items: center; gap: 4px; margin-bottom: 4px;
+  }
+  #modal-filename {
+    flex: 1; background: var(--btn-bg); border: 1px solid var(--border);
+    border-radius: 6px; color: var(--text); font-family: var(--font);
+    font-size: 12px; padding: 6px 10px; outline: none;
+  }
+  #modal-filename:focus { border-color: var(--border-hover); }
+  #modal-filename-ext { font-family: var(--font); font-size: 12px; color: var(--text-dim); }
   #modal-progress-bg {
     height: 4px; background: var(--border); border-radius: 2px; overflow: hidden; margin-bottom: 20px;
   }
   #modal-progress { height: 100%; background: var(--accent); width: 0%; transition: width 0.1s; }
   #modal-cancel {
-    background: var(--btn-bg); border: 1px solid var(--border); border-radius: 6px;
-    color: var(--text); font-family: var(--font); font-size: 12px;
-    padding: 8px 20px; cursor: pointer;
+    background: none; border: 1px solid var(--border); border-radius: 6px;
+    color: var(--text-dim); font-family: var(--font); font-size: 11px;
+    padding: 8px 16px; cursor: pointer; transition: all 0.15s;
   }
+  #modal-cancel:hover { border-color: var(--border-hover); color: var(--text); background: var(--btn-bg); }
+  #modal-save-footer {
+    display: flex; justify-content: center; gap: 8px; margin-top: 24px;
+  }
+  #modal-save-phase { padding: 8px 0 4px; }
+  #modal-save-cancel {
+    background: none; border: 1px solid var(--border); border-radius: 6px;
+    color: var(--text-dim); font-family: var(--font); font-size: 11px;
+    padding: 8px 16px; cursor: pointer; transition: all 0.15s;
+  }
+  #modal-save-cancel:hover { border-color: var(--border-hover); color: var(--text); background: var(--btn-bg); }
+  #modal-save-done {
+    background: rgba(var(--accent-blue-rgb), 0.15); border: 1px solid rgba(var(--accent-blue-rgb), 0.5);
+    border-radius: 6px; color: var(--accent-blue-light); font-family: var(--font); font-size: 11px;
+    padding: 8px 20px; cursor: pointer; transition: all 0.15s;
+  }
+  #modal-save-done:hover { background: rgba(var(--accent-blue-rgb), 0.25); border-color: rgba(var(--accent-blue-rgb), 0.8); color: var(--accent-blue-light); }
   #modal-status {
     font-family: var(--font);
     font-size: 11px;
@@ -562,14 +617,14 @@
     transition: all 0.15s;
     flex-shrink: 0;
   }
-  #info-btn:hover { background: var(--btn-active); border-color: #666; }
+  #info-btn:hover { background: var(--btn-active); border-color: var(--border-hover); }
 
   /* Save button */
   #save-btn {
     background: var(--btn-bg);
     border: 1px solid var(--border);
     border-radius: 6px;
-    color: #888;
+    color: var(--text-dim);
     font-family: var(--font);
     font-size: 11px;
     padding: 0 14px;
@@ -579,10 +634,10 @@
     transition: all 0.15s;
     white-space: nowrap;
   }
-  #save-btn:hover { background: var(--btn-active); border-color: #666; color: #ccc; }
+  #save-btn:hover { background: var(--btn-active); border-color: var(--border-hover); color: var(--text-hover); }
   #save-btn.unsaved { border-color: var(--accent); color: var(--accent); }
   #save-btn.unsaved:hover { background: var(--btn-active); }
-  #save-btn.saved-flash { border-color: #5a9e6f; color: #5a9e6f; }
+  #save-btn.saved-flash { border-color: var(--color-saved); color: var(--color-saved); }
 
   /* Help modal overlay */
   #help-modal {
@@ -637,7 +692,7 @@
     padding: 0;
     flex-shrink: 0;
   }
-  #help-close:hover { border-color: #666; color: var(--text); background: var(--btn-bg); }
+  #help-close:hover { border-color: var(--border-hover); color: var(--text); background: var(--btn-bg); }
 
   #help-title {
     font-family: var(--font);
@@ -650,7 +705,7 @@
   #help-body {
     font-family: var(--font);
     font-size: 12px;
-    color: #c0c0c0;
+    color: var(--text-body);
     line-height: 1.65;
     flex: 1;
   }
@@ -693,14 +748,14 @@
     transition: all 0.15s;
     white-space: nowrap;
   }
-  #help-back:hover:not(:disabled) { border-color: #666; color: var(--text); background: var(--btn-bg); }
+  #help-back:hover:not(:disabled) { border-color: var(--border-hover); color: var(--text); background: var(--btn-bg); }
   #help-back:disabled { opacity: 0.3; cursor: not-allowed; }
 
   #help-next {
-    background: rgba(74,108,247,0.15);
-    border: 1px solid rgba(74,108,247,0.5);
+    background: rgba(var(--accent-blue-rgb), 0.15);
+    border: 1px solid rgba(var(--accent-blue-rgb), 0.5);
     border-radius: 6px;
-    color: #7b9fff;
+    color: var(--accent-blue-light);
     font-family: var(--font);
     font-size: 11px;
     padding: 7px 16px;
@@ -708,13 +763,13 @@
     transition: all 0.15s;
     white-space: nowrap;
   }
-  #help-next:hover { background: rgba(74,108,247,0.25); border-color: rgba(74,108,247,0.8); color: #a0b8ff; }
+  #help-next:hover { background: rgba(var(--accent-blue-rgb), 0.25); border-color: rgba(var(--accent-blue-rgb), 0.8); color: var(--accent-blue-light); }
 
   /* ─── CANVAS SETTINGS MODAL ──────────────────────────────────────────────── */
   #canvas-modal {
     display: none;
     position: fixed; inset: 0;
-    background: rgba(0,0,0,0.6);
+    background: var(--overlay-bg);
     z-index: 200;
     align-items: center;
     justify-content: center;
@@ -760,7 +815,7 @@
     transition: all 0.15s;
     padding: 0;
   }
-  #canvas-modal-close:hover { border-color: #666; color: var(--text); background: var(--btn-bg); }
+  #canvas-modal-close:hover { border-color: var(--border-hover); color: var(--text); background: var(--btn-bg); }
 
   .canvas-section-label {
     font-family: var(--font);
@@ -793,11 +848,11 @@
     font-family: var(--font);
     font-size: 11px;
   }
-  .ratio-btn:hover { background: var(--btn-active); border-color: #666; color: var(--text); }
+  .ratio-btn:hover { background: var(--btn-active); border-color: var(--border-hover); color: var(--text); }
   .ratio-btn.active {
     border-color: var(--accent-blue);
-    background: rgba(74,108,247,0.12);
-    color: #7b9fff;
+    background: rgba(var(--accent-blue-rgb), 0.12);
+    color: var(--accent-blue-light);
   }
 
   /* Visual ratio preview boxes */
@@ -807,7 +862,7 @@
     opacity: 0.5;
     transition: opacity 0.15s;
   }
-  .ratio-btn.active .ratio-preview { opacity: 1; background: #7b9fff; }
+  .ratio-btn.active .ratio-preview { opacity: 1; background: var(--accent-blue-light); }
   .ratio-btn:hover .ratio-preview  { opacity: 0.8; }
 
   .ratio-16-9 { width: 48px; height: 27px; }
@@ -837,14 +892,14 @@
   }
   #canvas-bg-preview {
     position: absolute; inset: 0;
-    background: #ffffff;
+    background: white;
     pointer-events: none;
     /* Checkerboard for transparency perception */
     background-image:
-      linear-gradient(45deg, #555 25%, transparent 25%),
-      linear-gradient(-45deg, #555 25%, transparent 25%),
-      linear-gradient(45deg, transparent 75%, #555 75%),
-      linear-gradient(-45deg, transparent 75%, #555 75%);
+      linear-gradient(45deg, var(--checker-mid) 25%, transparent 25%),
+      linear-gradient(-45deg, var(--checker-mid) 25%, transparent 25%),
+      linear-gradient(45deg, transparent 75%, var(--checker-mid) 75%),
+      linear-gradient(-45deg, transparent 75%, var(--checker-mid) 75%);
     background-size: 8px 8px;
     background-position: 0 0, 0 4px, 4px -4px, -4px 0;
   }
@@ -879,27 +934,27 @@
     cursor: pointer;
     transition: all 0.15s;
   }
-  #canvas-modal-cancel:hover { border-color: #666; color: var(--text); background: var(--btn-bg); }
+  #canvas-modal-cancel:hover { border-color: var(--border-hover); color: var(--text); background: var(--btn-bg); }
 
   #canvas-modal-save {
-    background: rgba(74,108,247,0.15);
-    border: 1px solid rgba(74,108,247,0.5);
+    background: rgba(var(--accent-blue-rgb), 0.15);
+    border: 1px solid rgba(var(--accent-blue-rgb), 0.5);
     border-radius: 6px;
-    color: #7b9fff;
+    color: var(--accent-blue-light);
     font-family: var(--font);
     font-size: 11px;
     padding: 8px 20px;
     cursor: pointer;
     transition: all 0.15s;
   }
-  #canvas-modal-save:hover { background: rgba(74,108,247,0.25); border-color: rgba(74,108,247,0.8); color: #a0b8ff; }
+  #canvas-modal-save:hover { background: rgba(var(--accent-blue-rgb), 0.25); border-color: rgba(var(--accent-blue-rgb), 0.8); color: var(--accent-blue-light); }
 
   /* ─── RESET BUTTON ─────────────────────────────────────────────────────── */
   #reset-btn {
     background: var(--btn-bg);
     border: 1px solid var(--border);
     border-radius: 6px;
-    color: #888;
+    color: var(--text-dim);
     font-family: var(--font);
     font-size: 11px;
     padding: 0 14px;
@@ -909,13 +964,13 @@
     transition: all 0.15s;
     white-space: nowrap;
   }
-  #reset-btn:hover { background: var(--btn-active); border-color: #666; color: #ccc; }
+  #reset-btn:hover { background: var(--btn-active); border-color: var(--border-hover); color: var(--text-hover); }
 
   /* ─── RESET CONFIRMATION MODAL ──────────────────────────────────────────── */
   #reset-modal {
     display: none;
     position: fixed; inset: 0;
-    background: rgba(0,0,0,0.6);
+    background: var(--overlay-bg);
     z-index: 200;
     align-items: center;
     justify-content: center;
@@ -969,27 +1024,27 @@
     cursor: pointer;
     transition: all 0.15s;
   }
-  #reset-modal-cancel:hover { border-color: #666; color: var(--text); background: var(--btn-active); }
+  #reset-modal-cancel:hover { border-color: var(--border-hover); color: var(--text); background: var(--btn-active); }
 
   #reset-modal-confirm {
-    background: rgba(74,108,247,0.15);
-    border: 1px solid rgba(74,108,247,0.5);
+    background: rgba(var(--accent-blue-rgb), 0.15);
+    border: 1px solid rgba(var(--accent-blue-rgb), 0.5);
     border-radius: 6px;
-    color: #7b9fff;
+    color: var(--accent-blue-light);
     font-family: var(--font);
     font-size: 11px;
     padding: 8px 20px;
     cursor: pointer;
     transition: all 0.15s;
   }
-  #reset-modal-confirm:hover { background: rgba(74,108,247,0.25); border-color: rgba(74,108,247,0.8); color: #a0b8ff; }
+  #reset-modal-confirm:hover { background: rgba(var(--accent-blue-rgb), 0.25); border-color: rgba(var(--accent-blue-rgb), 0.8); color: var(--accent-blue-light); }
 
   /* ─── TEXT EDIT OVERLAY ─────────────────────────────────────────────────── */
   #text-edit-input {
     position: fixed;           /* viewport-relative — never clipped by overflow:hidden */
     background: transparent;
     border: none;
-    outline: 1px dashed rgba(200, 200, 200, 0.7);
+    outline: 1px dashed var(--text-edit-outline);
     border-radius: 2px;
     color: inherit;
     font-family: 'Geist', sans-serif;
@@ -1047,7 +1102,7 @@
       background: var(--btn-bg);
       border: 1px solid var(--border);
       border-radius: 6px;
-      color: #888;
+      color: var(--text-dim);
       font-family: var(--font);
       display: flex;
       align-items: center;
@@ -1082,7 +1137,7 @@
       display: none;
       align-items: center;
       justify-content: center;
-      background: rgba(0,0,0,0.6);
+      background: var(--overlay-bg);
     }
     #help-modal.visible { display: flex; }
 
