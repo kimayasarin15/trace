@@ -1567,24 +1567,24 @@ document.getElementById('modal-cancel').addEventListener('click', () => {
 // ─── HELP / INFO MODAL ────────────────────────────────────────────────────────
 const HELP_STEPS = [
   {
-    title: 'Create a canvas',
-    body: 'Start by selecting your canvas size and background color.',
-  },
-  {
     title: 'Draw',
-    body: 'Select an image, text or shape from the toolbar and pick a color, then drag on the canvas to draw it onto the active layer. Use the layer tabs at the bottom to add or switch between layers, each one holds a single object and will have its own recorded motion path. ',
+    body: 'Select an image, text or shape from the toolbar. Add or drag it onto the canvas onto the active layer. Each layer hold one single object. Use the layer tabs at the bottom to add or switch between layers. ',
   },
   {
     title: 'Edit',
-    body: 'When a layer is selected, you can change its size and color from the top toolbar.',
+    body: 'When a layer is selected, you can change its size and color from the top toolbar. ',
   },
   {
-    title: 'Record',
-    body: 'In Record mode, to animate a shape hit the REC button (or press <strong>R</strong>), then move your cursor across the canvas; objects will move from their center point. Recording stops automatically when the set duration runs out. You can edit the duration at anytime.',
+    title: 'Canvas',
+    body: 'The button on the top left corner lets you change the canvas size and background color.',
+  },
+  {
+    title: 'Animate',
+    body: 'Press the animate button to switch to animate mode. To animate a shape hit the REC button (or press <strong>R</strong>), then move your cursor across the canvas; objects will move from their center point. Each layer will have its own recorded motion path. Recording stops automatically when the set duration runs out. You can edit the duration at anytime.',
   },
   {
     title: 'Playback',
-    body: 'Once recording stops, press the <strong>▶ Play</strong> button to watch your shape animate along the recorded path. You can also scrub the timeline to jump to any moment.',
+    body: 'Once recording stops, press <strong>SPACE</strong> or the <strong>▶ Play</strong> button to watch your shape animate along the recorded path. You can also scrub the timeline to jump to any moment.',
   },
   {
     title: 'Delete',
@@ -1599,6 +1599,7 @@ const HELP_STEPS = [
     body: 'When you are done, click the <strong>Export</strong> button to render and download your animation as a WebM file.',
   },
 ];
+
 
 const helpModal   = document.getElementById('help-modal');
 const helpStepNum = document.getElementById('help-step-num');
