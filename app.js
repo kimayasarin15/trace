@@ -1568,7 +1568,7 @@ document.getElementById('modal-cancel').addEventListener('click', () => {
 const HELP_STEPS = [
   {
     title: 'Draw',
-    body: 'Select an image, text or shape from the toolbar. Add or drag it onto the canvas onto the active layer. Each layer hold one single object. Use the layer tabs at the bottom to add or switch between layers. ',
+    body: 'Select an image, text or shape from the toolbar. Add or drag it onto the canvas onto the active layer. Each layer holds one single object and its own motion path. Use the layer tabs at the bottom to add or switch between layers. ',
   },
   {
     title: 'Edit',
@@ -1580,7 +1580,7 @@ const HELP_STEPS = [
   },
   {
     title: 'Animate',
-    body: 'Press the animate button to switch to animate mode. To animate a shape hit the REC button (or press <strong>R</strong>), then move your cursor across the canvas; objects will move from their center point. Each layer will have its own recorded motion path. Recording stops automatically when the set duration runs out. You can edit the duration at anytime.',
+    body: 'Press the animate button to switch to animate mode. To animate a shape hit the REC button (or press <strong>R</strong>), then move your cursor across the canvas; objects will move from their center point. Recording stops automatically when the set duration runs out. You can edit the duration at anytime.',
   },
   {
     title: 'Playback',
